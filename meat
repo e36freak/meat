@@ -20,9 +20,6 @@
 #         mention that it's recommended to -Syu before installing              #
 #       figure out a better way to handle checking for git updates             #
 #         handle other VCS systems in the same way                             #
-#       make update system similar to cower? currently similar to pacman       #
-#       possibly use a better spinner/progress bar in download()               #
-#         ...or get rid of it                                                  #
 #       attempt to minimize calls to pacman, or make it less "interactive"     #
 #       !!!!!efficiency!!!!!                                                   #
 #       all kinds of shit :(                                                   #
@@ -99,26 +96,19 @@ declare pkg=                      # used when parsing options
 ### allow user to check PKGBUILD, .install, and other files
 # usage: checkfiles "package"
 checkfiles() {
-  local installfile file pkg=$1
+  local install file pkg=$1
   ## allow user to edit PKGBUILD and $install
   confirm "Edit PKGBUILD for \`$pkg'?" && "${EDITOR:-vi}" PKGBUILD
 
-  # parse PKGBUILD for $install, prompt if exists
-  installfile=$(awk -F "[=[:space:]\"'()]+" '
-    /install=/ {
-      for (i=0; i<=NF; i++)
-        if ($i == "install") {
-          print $(i+1);
-          exit;
-        }
-    }' PKGBUILD)
-  if [[ $installfile ]]; then
-    confirm "Edit \`$installfile'?" && "${EDITOR:-vi}" "$installfile"
+  # source PKGBUILD for $install, prompt if exists
+  source PKGBUILD
+  if [[ $install ]]; then
+    confirm "Edit \`$install'?" && "${EDITOR:-vi}" "$install"
   fi
 
   # allow for checking every other regular file
   if ((check_all)); then
-    for file in ./**/!(PKGBUILD|"$installfile"); do
+    for file in ./**/!(PKGBUILD|"$install"); do
       if [[ -f $file && -w $file ]]; then
         confirm "Edit \`$file'?" && "${EDITOR:-vi}" "$file"
       fi
@@ -208,17 +198,9 @@ die() {
 # usage: download "targets"
 download() {
   local flag pkg info
-  local cpid spid width c i error
-  
-  # create fifo, download the targets
-  mkfifo /tmp/cowout.$$ || die 'error creating named pipe'
-  "${cower[@]}" -ddbf "$@" &>/tmp/cowout.$$ & cpid=$!
   
   # print message
   info 1 'Cower is downloading packages...'
-
-  # traps to pass signals to backgrounded processes
-  trap 'hide 3 kill "$cpid"; echo; exit 1' 1 2 15
 
   # parse cower output, add to stacks
   while read -r flag pkg info; do
@@ -228,13 +210,7 @@ download() {
       E) err "$pkg $info";;
       *) err "cower: $flag $pkg $info";;
     esac
-  done </tmp/cowout.$$
-
-  # check cower's exit status
-  wait "$cpid" || err "cower error"
-
-  # reset traps
-  trap - 1 2 15
+  done < <("${cower[@]}" -ddbf "$@")
 }
 
 ## print error, skip if -f is supplied, else die
@@ -397,7 +373,7 @@ install_all() {
   fi
 
   # install targets in repos
-  ((${#pac_targets[@]})) && runasroot "${pacman[@]}" -S "${pac_targets[@]}"
+  ((${#pac_targets[@]})) && pac_install "${pac_targets[@]}"
 
   ## install AUR targets
   # pop values from stack, make array in the correct order
@@ -412,6 +388,19 @@ install_all() {
 # usage pacadd 'value'
 pacadd() {
   pac_targets+=("$@")
+}
+
+## install pacman packages
+# usage: pac_install "targets"
+pac_install() {
+  local -a explicits
+  local pkg
+  hide 1 runasroot "${pacman[@]}" -S --asdeps "$@"
+  for pkg; do
+    inarray "$pkg" "${targets[@]}" && explicits+=("$pkg")
+  done
+  info 2 "changing packages specified explicitly to have the correct properties"
+  hide 2 runasroot "${pacman[@]}" -D --noconfirm --as-explicit "${explicits[@]}"
 }
 
 ## pop value from top of stack
@@ -788,7 +777,7 @@ touch "$git_sums_file" || \
   die "\`$git_sums_file' does not exist and could not be created"
 
 ### lock file handling
-(
+{
 flock -n 9 || die "only one instance of meat may be running at a time." \
                   "if you are sure that another instance isn't running," \
                   "remove \`$lock_file'"
@@ -832,7 +821,7 @@ elif ((git_db_update)); then
   if ((${#targets[@]})); then
     gitcheck "${targets[@]}"
   else
-    gitcheck $(pacman -Qmq | grep -e '-git$')
+    gitcheck $(pacman -Qmqs -- -git$)
   fi
   info 1 'git database updated successfully'
 
@@ -846,6 +835,6 @@ elif ((full_update)); then
 else
   die "this should never been seen, report a bug"
 fi
-) 9>"$lock_file"
+} 9>"$lock_file"
 
 # vim set ts=2 sw=2
