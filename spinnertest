@@ -1,0 +1,22 @@
+#!/bin/bash
+
+sleep 30 & spid=$!
+
+{
+width=$(tput cols)
+until false; do
+  for ((i=0; i<(width-1); i++)); do
+    for c in '-' '\' '|' '/' '-' '\' '|'; do
+      printf '\b%s' "$c"
+      sleep .05s
+    done
+    printf '%s' ' '
+  done
+  printf '\r%*s\r' "$width" ' '
+done
+echo
+} & lpid=$!
+
+trap 'kill "$spid" "$lpid"; echo; exit 1' 1 2 15
+
+wait "$spid"; kill "$lpid"

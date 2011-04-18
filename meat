@@ -1,0 +1,850 @@
+#!/bin/bash
+
+################################################################################
+# MEAT!!!! simple fast AUR helper, using cower as a back end                   #
+################################################################################
+# Copywrite Daniel Mills <danielmills1@gmail.com>                              #
+# Wraps 'cower', Copywrite Dave Reisner <d@falconindy.com>                     #
+# Licensed under GPL version 3                                                 #
+#                                                                              #
+# Requires bash4, cower-git, awk                                               #
+# Optional deps: sudo (recommended, so that you're not constantly prompted)    #
+#                git (for handling automatic checking of git pkgs)             #
+#                pacman-color (for colorized pacman output)                    #
+################################################################################
+# TODO: pick a better name                                                     #
+#       find a better way to handle .install files?                            #
+#       write documentation                                                    #
+#         make note of default overwriting of existing package dirs            #
+#           specify that an alternate target should be used                    #
+#         mention that it's recommended to -Syu before installing              #
+#       figure out a better way to handle checking for git updates             #
+#         handle other VCS systems in the same way                             #
+#       make update system similar to cower? currently similar to pacman       #
+#       possibly use a better spinner/progress bar in download()               #
+#         ...or get rid of it                                                  #
+#       attempt to minimize calls to pacman, or make it less "interactive"     #
+#       !!!!!efficiency!!!!!                                                   #
+#       all kinds of shit :(                                                   #
+################################################################################
+### Declarations
+
+shopt -s extglob dotglob globstar nullglob
+
+### files
+declare config_file=${XDG_CONFIG_HOME:-$HOME/.config}/meat/config # config file
+declare cache_dir=${XDG_CACHE_HOME:-$HOME/.cache}/meat            # cache dir
+declare git_sums_file=$cache_dir/gitsums          # git checksums file
+declare lock_file=$cache_dir/meat.lck             # lock file
+
+### default values
+declare download_dir=/tmp/meat          # target directory for PKGBUILDs, etc
+declare gitcheck_dir=/tmp/gitcheck.$$   # target directory for git cloning
+declare color=0                         # boolean, '1' for color
+declare -i verbosity=1                  # integer, verbosity level
+declare -i gitcheck=1                   # boolean, '1' to check git for updates
+
+### default programs
+declare -a pacman=(pacman)        # array, pacman command and opts
+declare -a cower=(cower)          # array, cower command and opts
+declare -a makepkg=(makepkg)      # array, makepkg command and opts
+
+### global variables
+# color handling
+declare red=$(tput bold; tput setaf 1)      # bold red
+declare green=$(tput bold; tput setaf 2)    # bold green
+declare yellow=$(tput bold; tput setaf 3)   # bold yellow
+declare blue=$(tput bold; tput setaf 4)     # bold blue
+declare bold=$(tput bold)                   # bold white
+declare reset=$(tput sgr0)                  # reset colors
+
+### option handling
+# operations
+declare -i op_declared=0        # boolean, if 1 an option has been specified
+declare -i info_level=0         # integer, for how many '-i's to pass to cower
+                                  # also used for checking for --info
+declare -i download=0           # boolean, set for --download
+declare -i msearch=0            # boolean, set for --msearch
+declare -i search=0             # boolean, set for --search
+declare -i update=0             # boolean, set for --update
+declare -i full_update=0        # boolean, set for hidden --fullupdate operation
+declare -i git_db_update=0      # boolean, set for --git-db-update
+
+# options
+declare -a options=()         # array, opts, used to prepare opts for parsing
+declare -a ignore=()          # array, pkgs to ignore
+declare -a repo_ignore=()     # array, repos to ignore
+declare -a group_ignore=()    # array, groups to ignore
+declare -a addignore=()       # array, used to turn CSV into an array
+declare -i force=0            # boolean, if 1 --force has been specified
+declare -i check_git=0        # boolean, if 1 --git-check has been specified
+declare -i check_all=0        # boolean, if 1 --check-all has been specified
+declare -i threads=10         # integer, number of threads for cower to create
+declare -i timeout=10         # integer, cower's timeout time in seconds
+declare -i nossl=0            # boolean, if 1 --nossl has been specified
+
+### stuff to download
+declare -a targets=()             # array, full list of targets
+declare -a pac_targets=()         # array, list of pacman targets
+declare -a cow_targets=()         # stack, list of cower targets
+declare -i stack_size=0           # integer, size of cow_targets stack
+declare -a final_cow_targets=()   # array, cower targets in correct order
+declare -a git_ignore=()          # array, list of packages to ignore for git
+declare -A checked_gits=()        # associative array, key is name, val is sum
+declare pkg=                      # used when parsing options
+
+################################################################################
+### Functions
+
+### allow user to check PKGBUILD, .install, and other files
+# usage: checkfiles "package"
+checkfiles() {
+  local installfile file pkg=$1
+  ## allow user to edit PKGBUILD and $install
+  confirm "Edit PKGBUILD for \`$pkg'?" && "${EDITOR:-vi}" PKGBUILD
+
+  # parse PKGBUILD for $install, prompt if exists
+  installfile=$(awk -F "[=[:space:]\"'()]+" '
+    /install=/ {
+      for (i=0; i<=NF; i++)
+        if ($i == "install") {
+          print $(i+1);
+          exit;
+        }
+    }' PKGBUILD)
+  if [[ $installfile ]]; then
+    confirm "Edit \`$installfile'?" && "${EDITOR:-vi}" "$installfile"
+  fi
+
+  # allow for checking every other regular file
+  if ((check_all)); then
+    for file in ./**/!(PKGBUILD|"$installfile"); do
+      if [[ -f $file && -w $file ]]; then
+        confirm "Edit \`$file'?" && "${EDITOR:-vi}" "$file"
+      fi
+    done
+  fi
+}
+
+### clean up, clean up, everybody everywhere!
+cleanup() {
+  rm -f "/tmp/cowout.$$" "$tmp"
+}
+    
+## ask for confirmation
+# usage: confirm "message"
+confirm() {
+  local -l reply        # convert to lowercase on assignment
+  
+  # make sure stdin is a terminal
+  [[ -t 0 ]] || exec </dev/tty
+
+  # actually print the prompt, return according to response
+  read -p "$bold$1$reset [Y/n] " reply
+  [[ -z $reply || $reply = y?(es) ]]
+}
+
+## download and install through cower
+# usage: cow_install "target dir" "targets"
+cow_install() {
+  local pkg newsum
+  (($#)) || return
+  hide 4 pushd "$download_dir" || die "could not cd to \`$download_dir'"
+
+  # build and install
+  for pkg; do
+    hide 4 pushd "$pkg" || { 
+      err "error while changing to dir \`$pkg'"; continue
+    }
+
+    ## allow user to check files
+    checkfiles "$pkg"
+
+    ## build and install package
+    until "${makepkg[@]}" -f; do
+      confirm "error making package \`$pkg', try again?" || exit
+      checkfiles "$pkg"
+    done
+
+    # check if package is explicit, or installed as a dep, install accordingly
+    if inarray "$pkg" "${targets[@]}"; then
+      hide 1 runasroot "${pacman[@]}" -U *.pkg.tar.?z || {
+        err "something went wrong while installing \`$pkg'"; continue
+      }
+    else
+      hide 1 runasroot "${pacman[@]}" -U --asdeps *.pkg.tar.?z || {
+        err "something went wrong while installing \`$pkg'"; continue
+      }
+    fi
+
+    # if package is git, update sums file
+    ((check_git)) && [[ $pkg = *-git ]] || continue
+    if [[ ${checked_gits[$pkg]} ]]; then
+      git_addsum "$pkg" "${checked_gits[$pkg]}"
+    else
+      inarray "$pkg" "${git_ignore[@]}" && continue
+      { newsum=$(git_getsum "$pkg" 3>&1 >&4-); } 4>&1 || continue
+      git_addsum "$pkg" "$newsum"
+    fi
+
+    hide 4 popd
+  done
+  hide 4 popd
+}
+
+## print error message, exit
+# usage: die "messages"
+die() { 
+  if ((color)) && [[ -t 2 ]]; then
+    printf "$red%s:$reset" "error"
+  else
+    printf "$bold%s:$reset" "error"
+  fi
+  printf "\t %s\n" "$@"
+  exit 1
+} >&2
+
+## download packages, parse cower output for dependency info
+# usage: download "targets"
+download() {
+  local flag pkg info
+  local cpid spid width c i error
+  
+  # create fifo, download the targets
+  mkfifo /tmp/cowout.$$ || die 'error creating named pipe'
+  "${cower[@]}" -ddbf "$@" &>/tmp/cowout.$$ & cpid=$!
+  
+  # print message
+  info 1 'Cower is downloading packages...'
+
+  # traps to pass signals to backgrounded processes
+  trap 'hide 3 kill "$cpid"; echo; exit 1' 1 2 15
+
+  # parse cower output, add to stacks
+  while read -r flag pkg info; do
+    case $flag in
+      S) push "$pkg"; info 2 "$info";;
+      W) pacadd "$pkg"; info 2 "$info";;
+      E) err "$pkg $info";;
+      *) err "cower: $flag $pkg $info";;
+    esac
+  done </tmp/cowout.$$
+
+  # check cower's exit status
+  wait "$cpid" || err "cower error"
+
+  # reset traps
+  trap - 1 2 15
+}
+
+## print error, skip if -f is supplied, else die
+# usage: err "messages"
+err() {
+  if ((force)); then
+    warn 1 "$@"
+  else
+    die "$@"
+  fi
+}
+
+## update the git_sums_file for a given package
+# usage: git_addsum "name" "sum"
+git_addsum() {
+  local name=$1; sum=$2
+  tmp=$(mktemp) || die "error creating temp file"
+
+  {
+  awk -v name="$name" '$1 != name' "$git_sums_file"
+  printf "%s %s\n" "$name" "$sum"
+  } >"$tmp" && mv "$tmp" "$git_sums_file"
+}
+
+## shallow git clone, rev parse, return current sum
+# usage: { sum=$(git_getsum "$pkg" 3>&1 >&4-); } 4>&1
+# (aka capture fd 3, leave stdout and stderr intact)
+git_getsum() {
+  local pkg=$1 newsum _gitroot _gitname
+
+  # delete existing build directories to avoid conflicts
+  info 3 "checking for \`$pkg' directory, deleting if it exists"
+  [[ -d $gitcheck_dir/$pkg ]] && rm -rf "$gitcheck_dir/$pkg"
+
+  # source PKGBUILD, get git source
+  info 3 "sourcing PKGBUILD for \`$pkg'"
+  if [[ ! -r $download_dir/$pkg/PKGBUILD ]]; then
+    hide 2 "${cower[@]}" -d "$pkg" || {
+      warn 1 "error downloading PKGBUILD for \`$pkg', skipping"
+      return 1
+    }
+  fi
+  source "$download_dir/$pkg/PKGBUILD" || {
+    warn 1 "error sourcing PKGBUILD for \`$pkg', skipping"
+    return 1
+  }
+      
+  # create directory to check git packages, change to dir
+  mkdir -p "$gitcheck_dir" && hide 4 pushd "$gitcheck_dir" || \
+    die "error creating gitcheck directory \`$gitcheck_dir'"
+
+  # shallow git clone
+  info 2 "cloning git repo for \`$pkg'"
+  hide 2 git clone --depth 1 "$_gitroot" "$_gitname" || {
+    warn 1 "$_gitname not found in github, check \`$_gitroot', skipping"
+    return 1
+  }
+
+  # get current md5sum
+  if hide 4 pushd "$_gitname"; then
+    newsum=$(git rev-parse origin) || {
+      warn 1 "error getting md5sum for \`$pkg', skipping"
+      return 1
+    }
+    hide 4 popd && rm -rf "$_gitname" &>/dev/null
+  else
+    warn 1 "error changing dir for \`$pkg', skipping"
+    return 1
+  fi
+
+  hide 4 popd
+  # output sum
+  printf '%s' "$newsum" >&3
+}
+
+### check if installed git packages are up to date
+gitcheck() {
+  local pkg tmp
+  local newsum oldsum name sum
+
+  # check for updates
+  for pkg; do
+    # skip ignored packages
+    inarray "$pkg" "${git_ignore[@]}" && continue
+
+    # get old md5sum from file
+    oldsum=$(awk -v name="$pkg" '$1 == name{print $2}' "$git_sums_file") || \
+      continue
+
+    # get new/current md5sum
+    { newsum=$(git_getsum "$pkg" 3>&1 >&4-); } 4>&1 || continue
+
+    # compare sums
+    if [[ $oldsum = "$newsum" ]]; then
+      info 1 "\`$pkg' is up to date"
+      continue
+    fi
+
+    # this stuff is only done if the md5sums don't match
+    info 1 "\`$pkg' is out of date, updating" 
+    if ((update)); then
+      targets+=("$pkg")
+      checked_gits["$pkg"]=$newsum
+    else
+      git_addsum "$pkg" "$newsum"
+    fi
+  done
+}
+
+## run command, suppressing output according to verbosity
+# usage: hide 'verbosity' "command"
+hide() {
+  local v=$1; shift
+  if ((verbosity >= v)); then
+    "$@"
+  else
+    "$@" &>/dev/null
+  fi
+}
+
+## checks if "$needle" is in "${haystack[@]}"
+# usage: inarray "$needle" "${haystack[@]}"
+inarray() {
+  local val needle=$1; shift
+  (($#)) || return
+  for val; do
+    [[ $needle = "$val" ]] && return
+  done
+}
+
+## print info message
+# usage: info 'verbosity' "messages"
+info() {
+  local v=$1; shift
+  ((verbosity >= v)) || return
+  printf "$bold"; printf "%s\n" "$@"; printf "$reset"
+}
+
+### install everything in "${targets[@]}"
+install_all() {
+  ((${#targets[@]})) || {
+    info 1 "there is nothing to do"
+    exit 0
+  }
+
+  # download targets, or put in the pacman targets array
+  download "${targets[@]}"
+
+  # print lists of targets
+  if ((${#cow_targets[@]} || ${#pac_targets[@]})); then
+    ((${#pac_targets[@]})) && {
+      print_targets "blue" "Repo Targets" "${pac_targets[@]}"
+    }
+    ((${#cow_targets[@]})) && {
+      print_targets "green" "AUR Targets" "${cow_targets[@]}"
+    } 
+    echo; confirm "Proceed with installation?" || exit
+  else
+    exit 0
+  fi
+
+  # install targets in repos
+  ((${#pac_targets[@]})) && runasroot "${pacman[@]}" -S "${pac_targets[@]}"
+
+  ## install AUR targets
+  # pop values from stack, make array in the correct order
+  while ((stack_size--)); do
+    final_cow_targets+=("$(pop)")
+  done
+  # install AUR targets
+  ((${#final_cow_targets[@]})) && cow_install "${final_cow_targets[@]}"
+}
+
+## add value to pacman list
+# usage pacadd 'value'
+pacadd() {
+  pac_targets+=("$@")
+}
+
+## pop value from top of stack
+# usage: ((stack_size--)) && value=$(pop)
+pop() {
+  printf "%s" "${cow_targets[stack_size]}"
+}
+
+## print target list
+# usage: print_targets "color" "title" "targets"
+print_targets() {
+  local col=$1 name=$2; shift 2
+  local title="$name ($#): "
+  local width=$(($(tput cols)-${#title}))
+  local i=0
+  echo
+  
+  # print title
+  if ((color)) && [[ -t 1 ]]; then
+    printf "${!col}%s$reset" "$title"
+  else
+    printf "$bold%s$reset" "$title"
+  fi
+
+  # print list, indented properly
+  while read -r line; do
+    if ((! i++)); then
+      printf "%s\n" "$line"
+    else
+      printf "%*s%s\n" "${#title}" " " "$line"
+    fi
+  done < <(fold -sw "$width" <<<"$*")
+}
+
+## push value to top of stack
+# usage: push 'value'
+push() {
+  cow_targets[stack_size++]=$1
+}
+
+### run command as root
+# usage: runasroot "command"
+runasroot() {
+  if ((UID == 0)); then
+    "$@"
+  elif sudo -v &>/dev/null && sudo -l "$@" &>/dev/null; then
+    sudo "$@"
+  else
+    printf "%s " "Root"
+    su -c "$(printf '%q ' "$@")"
+  fi
+}
+
+### build arrays to ignore packages
+set_ignore_arrays() {
+  local IFS=,
+  if [[ ${ignore[*]} ]]; then
+    cower+=(--ignore "${ignore[*]}")
+    pacman+=(--ignore "${ignore[*]}")
+  fi
+  [[ ${repo_ignore[*]} ]] && cower+=(--ignorerepo "${repo_ignore[*]}")
+  [[ ${group_ignore[*]} ]] && pacman+=(--ignoregroup "${group_ignore[*]}")
+}
+
+### full AUR upgrade for installed packages
+upgrade() {
+  local pkg
+  ((check_git))  && gitcheck $(pacman -Qmq | grep -e '-git$')
+  coproc cowout { "${cower[@]}" -uq; } 2>&1 || die "cower error"
+  while read -ru "${cowout[0]}" pkg; do
+    targets+=("$pkg")
+  done
+}
+
+### print usage information
+usage() {
+  cat <<EOF
+meat 0.0.1-a1
+Usage: meat <operation> [options] target(s)...
+
+ Operations:
+  -d, --download          download and install target(s) -- dependencies will be
+                          automatically resolved
+  -G, --git-db-update     updates the git database with new sums, without
+                          actually installing anything (unstable).
+  -h, --help              display this help and exit
+  -i, --info              show info for target(s) -- pass twice for more detail
+  -m, --mesearch          show packages maintained by target(s)
+  -s, --search            search AUR for target(s)
+  -u, --update            check for updates against AUR and install them
+  -U, --listupdates       check for updates against AUR and print them -- acts
+                          the same way as cower -u
+
+  only one operation may be specified.
+
+ General options:
+  -f, --force             no matter what happens, keep going -- this option is
+                          not recommended to be used
+  -g, --git-check         check and update checksums for git files. (unstable)
+      --ignoregit         ignore a package when checking for git updates.
+      --ignore <pkg>      ignore a package upgrade (can be used more than once)
+      --ignorerepo <repo> ignore a binary repo (can be used more than once)
+      --nossl             do not use https connections
+  -t, --target <dir>      specify an alternate download directory
+      --threads <num>     limit number of threads created
+      --timeout <num>     specify connection timeout in seconds
+      --check-all         when installing, prompts you to check every regular
+                          file in the package directory
+
+ Output options:
+  -c, --color             use colored output
+      --debug             show debug output
+      --format <string>   print package output according to format string
+      --listdelim <delim> change list format delimeter
+  -q, --quiet             output less
+  -v, --verbose           output more
+
+ Targets:
+  meat accepts a list of targets, space separated. If any target is the single
+  character '-', it will also read a list of packages from stdin, one per line.
+EOF
+}
+
+## print error message
+# usage: warn 'verbosity' "messages"
+warn() { 
+  local v=$1; shift
+  ((verbosity >= v)) || return
+  if ((color)) && [[ -t 2 ]]; then
+    printf "$yellow%s:$reset" "warning"
+  else
+    printf "$bold%s:$reset" "warning"
+  fi
+  printf " %s\n" "$1"; shift
+  printf "\t %s\n" "$@"
+} >&2
+
+################################################################################
+### main body of the program
+trap cleanup 0
+
+## check for controlling terminal
+tput cols &>/dev/null || die "requires a controlling terminal"
+
+## get configuration options
+if [[ -r $config_file ]]; then
+  source "$config_file"
+
+  # check that options are of the correct format
+  [[ $color = [01] ]] || \
+    die "invalid value for \`color' in the config file"
+  [[ $nossl = [01] ]] || \
+    die "invalid value for \`nossl' in the config file"
+  [[ $check_all = [01] ]] || \
+    die "invalid value for \`check_all' in the config file"
+  [[ $timeout = *[![:digit:]]* ]] && \
+    die "invalid value for \`timeout' in the config file"
+  [[ $threads = *[![:digit:]]* ]] && \
+    die "invalid value for \`threads' in the config file"
+else
+  warn 1 "error sourcing config file \`$config_file'" \
+         "reverting to default values"
+fi
+
+## parse options
+# iterate through the arguments, separate combined arguments
+while (($#)); do
+  case $1 in
+    -[!-]?*)
+      for ((i=1; i<${#1}; i++)); do
+        options+=("-${1:i:1}")
+      done
+      ;;
+    --?*=*) options+=("${1%%=*}" "${1#*=}");;
+    --) options+=(--endopts);;
+    *) options+=("$1");;
+  esac
+  shift
+done
+set -- "${options[@]}"
+
+# build commands, set operations, etc
+while [[ $1 = -?* ]]; do
+  case "$1" in
+    # operations
+    -h|--help|-\?) usage; exit;;
+    -d|--download) 
+      ((op_declared++))
+      download=1; shift
+      ;;
+    -i|--info)
+      ((! info_level && op_declared++))
+      ((info_level++)); shift
+      ;;
+    -m|--msearch)
+      ((op_declared++))
+      msearch=1; shift
+      ;;
+    -s|--search)
+      ((op_declared++))
+      search=1; shift
+      ;;
+    -u|--update)
+      ((op_declared++))
+      update=1; shift
+      ;;
+    -U|--listupdates)
+      ((op_declared++))
+      list_updates=1; shift
+      ;;
+    -G|--git-db-update)
+      ((op_declared++))
+      git_db_update=1; shift
+      ;;
+    --fullupdate)
+      ((op_declared++))
+      full_update=1; shift
+      ;;
+
+    # options
+    -c|--color) color=1; shift;;
+    -v|--verbose|--debug)
+      if [[ $1 = --debug ]]; then
+        verbosity=4
+      else
+        ((verbosity++))
+      fi
+      shift
+      ;;
+    -q|--quiet) ((verbosity > 0 && verbosity--)); shift;;
+    -f|--force) force=1; shift;;
+    --format) cower+=("--format" "$2"); shift 2;;
+    --ignore)
+      [[ $2 = *\ * ]] && die "invalid ignore list format: $2"
+      [[ $2 = -* ]] && die "no --ignore targets specified"
+      IFS=, read -ra addignore <<<"$2"
+      ignore+=("${addignore[@]}")
+      shift 2
+      ;;
+    --ignorerepo)
+      [[ $2 = *\ * ]] && die "invalid repo ignore list format: $2"
+      [[ $2 = -* ]] && die "no --ignorerepo targets specified"
+      IFS=, read -ra addignore <<<"$2"
+      repo_ignore+=("${addignore[@]}")
+      shift 2
+      ;;
+    --ignoregroup)
+      [[ $2 = *\ * ]] && die "invalid group ignore list format: $2"
+      [[ $2 = -* ]] && die "no --ignoregroup targets specified"
+      IFS=, read -ra addignore <<<"$2"
+      group_ignore+=("${addignore[@]}")
+      shift 2
+      ;;
+    --ignoregit)
+      [[ $2 = *\ * ]] && die "invalid git ignore list format: $2"
+      [[ $2 = -* ]] && die "no --gitignore targets specified"
+      IFS=, read -ra addignore <<<"$2"
+      git_ignore+=("${addignore[@]}")
+      shift 2
+      ;;
+    --nossl) nossl=1; shift;;
+    -t|--target)
+      [[ $2 = -* ]] && die "no target specified"
+      download_dir=$2; shift 2
+      ;;
+    --threads)
+      [[ $2 = +([[:digit:]]) ]] || {
+        die "invalid number of threads: $2"
+      } 
+      threads=$2; shift 2
+      ;;
+    --timeout)
+      [[ $2 = +([[:digit:]]) ]] || {
+        die "invalid value for timeout: $2"
+      }
+      timeout=$2; shift 2
+      ;;
+    -g|--git-check) check_git=1; shift;;
+    --check-all) check_all=1; shift;;
+
+    # end of options
+    --endopts) shift; break;;
+
+    # check for invalid options
+    *)
+      case $1 in
+        --?*) die "invalid option: \`$1'";;
+        *) die "invalid option: \`${1#-}'";;
+      esac
+      ;;
+  esac
+done
+
+## this script should not be run as root!
+[[ -w / ]] && \
+  die "do not run this script as root" \
+      "you will prompted for the sudo/root password when needed"
+  
+# option error handling, format checking
+if ((op_declared > 1)); then
+  die 'only one operation may be specified'
+elif ((! op_declared)); then
+  die 'no operation specified'
+fi
+((git_check && ! update)) && \
+  die '--git-check may only be used with -u (--update)'
+
+# get targets, from stdin and positional parameters
+while (($#)); do
+  case $1 in
+    -?*)
+      die "$1: invalid package name" \
+          "all operations and options must be specified before packages"
+      shift
+      ;;
+    -)
+      if [[ -t 0 ]]; then
+        die "unable to read stdin for packages"
+      else
+        while read -r pkg; do
+          targets+=("$pkg")
+        done
+      fi
+      shift
+      ;;
+    *) targets+=("$1"); shift;;
+  esac
+done
+
+# color info
+if ((color)) && [[ -t 1 ]]; then
+  type -P pacman-color &>/dev/null && pacman=(pacman-color) 
+  cower+=(-c) 
+else
+  makepkg+=(-m)
+fi
+
+## build cower and pacman base commands from options
+# verbosity
+if ((verbosity >= 3)); then
+  if ((verbosity >= 4)); then
+    pacman+=(--debug)
+    cower+=(--debug)
+  else
+    pacman+=(-v)
+    cower+=(-v)
+  fi
+elif ((! verbosity)); then
+  pacman+=(-q)
+  cower+=(-q)
+fi
+
+((timeout != 10)) && cower+=(--timeout "$timeout")  # timeout
+((nossl)) && cower+=(--nossl)                       # nossl
+((threads != 10)) && cower+=("--threads" "$2")      # threads
+
+# standard stuff
+#pacman+=(--noconfirm)
+cower+=(-t "$download_dir")
+
+# packages to ignore
+set_ignore_arrays
+
+### files and directories
+# make sure download dir exists
+mkdir -p "$download_dir" || die "download dir \`$download_dir' can't be created" \
+                                "check permissions"
+# create cache dir, if not existing
+mkdir -p "$cache_dir" || \
+  die "cache directory \`$cache_dir' does not exist and could not be created"
+# create git sums file, if not existing
+touch "$git_sums_file" || \
+  die "\`$git_sums_file' does not exist and could not be created"
+
+### lock file handling
+(
+flock -n 9 || die "only one instance of meat may be running at a time." \
+                  "if you are sure that another instance isn't running," \
+                  "remove \`$lock_file'"
+                
+## finally, we get to do shit!!!
+# --download, -d
+if ((download)); then
+  ((${#targets[@]})) || die "no targets specified"
+  install_all
+
+# --info, -i
+elif ((info_level)); then
+  ((${#targets[@]})) || die "no targets specified"
+  if ((info_level == 1)); then
+    "${cower[@]}" -i "${targets[@]}"
+  else
+    "${cower[@]}" -ii "${targets[@]}"
+  fi
+
+# --msearch, -m
+elif ((msearch)); then
+  ((${#targets[@]})) || die "no targets specified"
+  "${cower[@]}" -m "${targets[@]}"
+
+# --search, -s
+elif ((search)); then
+  ((${#targets[@]})) || die "no targets specified"
+  "${cower[@]}" -s "${targets[@]}"
+
+# --update, -u
+elif ((update)); then
+  upgrade
+  install_all
+
+# --listupdates, -U
+elif ((list_updates)); then
+  "${cower[@]}" -u "${targets[@]}"
+
+# --git-db-update, -G
+elif ((git_db_update)); then
+  if ((${#targets[@]})); then
+    gitcheck "${targets[@]}"
+  else
+    gitcheck $(pacman -Qmq | grep -e '-git$')
+  fi
+  info 1 'git database updated successfully'
+
+# --fullupdate
+elif ((full_update)); then
+  runasroot "${pacman[@]}" -Syu
+  upgrade
+  install_all
+
+# ZOMG
+else
+  die "this should never been seen, report a bug"
+fi
+) 9>"$lock_file"
+
+# vim set ts=2 sw=2

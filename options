@@ -1,0 +1,15 @@
+
+  while (($#)); do
+    if [[ $1 = -[!-]* ]]; then
+      for ((i=1; i<${#1}; i++)); do
+        options+=("-${1:i:1}")
+      done
+    elif [[ $1 = --*=* ]]; then
+      options+=("${1%%=*}" "${1#*=}")
+    else
+      options+=("$1")
+    fi
+    shift
+  done
+
+printf "%s\n" "${options[@]}"
