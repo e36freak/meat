@@ -445,9 +445,7 @@ push() {
 ### run command as root
 # usage: runasroot "command"
 runasroot() {
-  if ((UID == 0)); then
-    "$@"
-  elif sudo -v &>/dev/null && sudo -l "$@" &>/dev/null; then
+  if sudo -v &>/dev/null && sudo -l "$@" &>/dev/null; then
     sudo "$@"
   else
     printf "%s " "Root"
