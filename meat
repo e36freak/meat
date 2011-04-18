@@ -5,7 +5,7 @@
 ################################################################################
 # Copywrite Daniel Mills <danielmills1@gmail.com>                              #
 # Wraps 'cower', Copywrite Dave Reisner <d@falconindy.com>                     #
-# Licensed under GPL version 3                                                 #
+# Licensed under MIT
 #                                                                              #
 # Requires bash4, cower-git, awk                                               #
 # Optional deps: sudo (recommended, so that you're not constantly prompted)    #
@@ -415,8 +415,9 @@ pacadd() {
 }
 
 ## pop value from top of stack
-# usage: ((stack_size--)) && value=$(pop)
+# usage: value=$(pop)
 pop() {
+  ((stack_size >= 0)) || return
   printf "%s" "${cow_targets[stack_size]}"
 }
 
@@ -706,7 +707,7 @@ while [[ $1 = -?* ]]; do
 done
 
 ## this script should not be run as root!
-[[ -w / ]] && \
+((UID == 0)) && \
   die "do not run this script as root" \
       "you will prompted for the sudo/root password when needed"
   
