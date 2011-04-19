@@ -5,7 +5,27 @@
 ################################################################################
 # Copywrite Daniel Mills <danielmills1@gmail.com>                              #
 # Wraps 'cower', Copywrite Dave Reisner <d@falconindy.com>                     #
-# Licensed under MIT
+#                                                                              #
+# Permission is hereby granted, free of charge, to any person                  #
+# obtaining a copy of this software and associated documentation               #
+# files (the "Software"), to deal in the Software without                      #
+# restriction, including without limitation the rights to use,                 #
+# copy, modify, merge, publish, distribute, sublicense, and/or sell            #
+# copies of the Software, and to permit persons to whom the                    #
+# Software is furnished to do so, subject to the following                     #
+# conditions:                                                                  #
+#                                                                              #
+# The above copyright notice and this permission notice shall be               #
+# included in all copies or substantial portions of the Software.              #
+#                                                                              #
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,              #
+# EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES              #
+# OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND                     #
+# NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT                  #
+# HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY,                 #
+# WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING                 #
+# FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR                #
+# OTHER DEALINGS IN THE SOFTWARE.                                              #
 #                                                                              #
 # Requires bash4, cower-git, awk                                               #
 # Optional deps: sudo (recommended, so that you're not constantly prompted)    #
@@ -335,10 +355,10 @@ hide() {
 # usage: inarray "$needle" "${haystack[@]}"
 inarray() {
   local val needle=$1; shift
-  (($#)) || return
   for val; do
     [[ $needle = "$val" ]] && return
   done
+  return 1
 }
 
 ## print info message
@@ -367,7 +387,7 @@ install_all() {
     ((${#cow_targets[@]})) && {
       print_targets "green" "AUR Targets" "${cow_targets[@]}"
     } 
-    echo; confirm "Proceed with installation?" || exit
+    echo; confirm "Proceed with installation?" || exit 0
   else
     exit 0
   fi
@@ -765,8 +785,9 @@ set_ignore_arrays
 
 ### files and directories
 # make sure download dir exists
-mkdir -p "$download_dir" || die "download dir \`$download_dir' can't be created" \
-                                "check permissions"
+mkdir -p "$download_dir" || \
+  die "download dir \`$download_dir' can't be created" \
+      "check permissions"
 # create cache dir, if not existing
 mkdir -p "$cache_dir" || \
   die "cache directory \`$cache_dir' does not exist and could not be created"
