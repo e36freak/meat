@@ -110,51 +110,9 @@ declare pkg=                      # used when parsing options
 ################################################################################
 ### Functions
 
-### allow user to check PKGBUILD, .install, and other files
-# usage: checkfiles "package"
-checkfiles() {
-  local install file pkg=$1
-
-  ## allow user to edit PKGBUILD and $install
-  confirm "Edit PKGBUILD for \`$pkg'?" && "${EDITOR:-vi}" PKGBUILD
-
-  # source PKGBUILD for $install, prompt if exists
-  source PKGBUILD
-  if [[ $install ]]; then
-    confirm "Edit \`$install'?" && "${EDITOR:-vi}" "$install"
-  fi
-
-  # allow for checking every other regular file
-  if ((check_all)); then
-    for file in ./**/!(PKGBUILD|"$install"); do
-      if [[ -f $file && -w $file ]]; then
-        confirm "Edit \`$file'?" && "${EDITOR:-vi}" "$file"
-      fi
-    done
-  fi
-}
-
-### clean up, clean up, everybody everywhere!
-cleanup() {
-  rm -f "/tmp/cowout.$$" "$tmp"
-}
-    
-## ask for confirmation
-# usage: confirm "message"
-confirm() {
-  local -l reply        # convert to lowercase on assignment
-
-  # make sure stdin is a terminal
-  [[ -t 0 ]] || exec </dev/tty
-
-  # actually print the prompt, return according to response
-  read -p "$bold$1$reset [Y/n] " reply
-  [[ -z $reply || $reply = y?(es) ]]
-}
-
-## download and install through cower
-# usage: cow_install "target dir" "targets"
-cow_install() {
+## build and install AUR packages
+# usage: aur_install "target dir" "targets"
+aur_install() {
   local pkg newsum
   hide 4 pushd "$download_dir" || die "could not cd to \`$download_dir'"
 
@@ -197,6 +155,48 @@ cow_install() {
     hide 4 popd
   done
   hide 4 popd
+}
+
+### allow user to check PKGBUILD, .install, and other files
+# usage: checkfiles "package"
+checkfiles() {
+  local install file pkg=$1
+
+  ## allow user to edit PKGBUILD and $install
+  confirm "Edit PKGBUILD for \`$pkg'?" && "${EDITOR:-vi}" PKGBUILD
+
+  # source PKGBUILD for $install, prompt if exists
+  source PKGBUILD
+  if [[ $install ]]; then
+    confirm "Edit \`$install'?" && "${EDITOR:-vi}" "$install"
+  fi
+
+  # allow for checking every other regular file
+  if ((check_all)); then
+    for file in ./**/!(PKGBUILD|"$install"); do
+      if [[ -f $file && -w $file ]]; then
+        confirm "Edit \`$file'?" && "${EDITOR:-vi}" "$file"
+      fi
+    done
+  fi
+}
+
+### clean up, clean up, everybody everywhere!
+cleanup() {
+  rm -f "/tmp/cowout.$$" "$tmp"
+}
+    
+## ask for confirmation
+# usage: confirm "message"
+confirm() {
+  local -l reply        # convert to lowercase on assignment
+
+  # make sure stdin is a terminal
+  [[ -t 0 ]] || exec </dev/tty
+
+  # actually print the prompt, return according to response
+  read -p "$bold$1$reset [Y/n] " reply
+  [[ -z $reply || $reply = y?(es) ]]
 }
 
 ## print error message, exit
@@ -395,7 +395,7 @@ install_all() {
     final_cow_targets+=("$(pop)")
   done
   # install AUR targets
-  ((${#final_cow_targets[@]})) && cow_install "${final_cow_targets[@]}"
+  ((${#final_cow_targets[@]})) && aur_install "${final_cow_targets[@]}"
 }
 
 ## add value to pacman list
