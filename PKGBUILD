@@ -1,13 +1,13 @@
 # Contributor: Daniel Mills <danielmills1@gmail.com>
 
 pkgname=meat-git
-pkgver=20110401
+pkgver=20110419
 pkgrel=1
 pkgdesc="Bash wrapper for Cower"
 arch=('i686' 'x86_64')
 url="http://github.com/e36freak/meat"
 license=('MIT')
-depends=('bash' 'cower' 'awk')
+depends=('pacman' 'bash>=4.0' 'cower' 'awk')
 makedepends=('git')
 optdepends=('sudo: get prompted less when installing'
             'pacman-color: colorized output')
@@ -23,11 +23,10 @@ build() {
     msg "The local files are updated."
   else
     git clone "$_gitroot" "$_gitname"
+    cd "$_gitname"
   fi
 
-  cd "$_gitname"
-
-  install -m 755 -D meat "$srcdir/pkg/usr/bin/meat"
+  install -m 755 -D meat "$pkgdir/usr/bin/meat"
 }
 
 # vim: ft=sh syn=sh et
