@@ -849,4 +849,4 @@ else
 fi
 } 9>"$lock_file"
 
-# vim set ts=2 et=2
+# vim set ts=2 et
