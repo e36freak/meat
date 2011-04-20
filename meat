@@ -52,16 +52,16 @@ declare git_sums_file=$cache_dir/gitsums          # git checksums file
 declare lock_file=$cache_dir/meat.lck             # lock file
 
 ### default values
-declare download_dir=/tmp/meat          # target directory for PKGBUILDs, etc
-declare gitcheck_dir=/tmp/gitcheck.$$   # target directory for git cloning
-declare color=0                         # boolean, '1' for color
-declare -i verbosity=1                  # integer, verbosity level
 declare -i gitcheck=1                   # boolean, '1' to check git for updates
+declare -i verbosity=1                  # integer, verbosity level
+declare color=0                         # boolean, '1' for color
+declare download_dir=/tmp/meat          # target directory for PKGBUILDs, etc
+declare gitcheck_dir=$(mktemp -d)       # target directory for git cloning
 
 ### default programs
-declare -a pacman=(pacman)        # array, pacman command and opts
 declare -a cower=(cower)          # array, cower command and opts
 declare -a makepkg=(makepkg)      # array, makepkg command and opts
+declare -a pacman=(pacman)        # array, pacman command and opts
 
 ### global variables
 # color handling
@@ -74,37 +74,37 @@ declare reset=$(tput sgr0)                  # reset colors
 
 ### option handling
 # operations
-declare -i op_declared=0        # boolean, if 1 an option has been specified
-declare -i info_level=0         # integer, for how many '-i's to pass to cower
-                                  # also used for checking for --info
 declare -i download=0           # boolean, set for --download
-declare -i msearch=0            # boolean, set for --msearch
-declare -i search=0             # boolean, set for --search
-declare -i update=0             # boolean, set for --update
 declare -i full_update=0        # boolean, set for hidden --fullupdate operation
 declare -i git_db_update=0      # boolean, set for --git-db-update
+declare -i info_level=0         # integer, for how many '-i's to pass to cower
+                                  # also used for checking for --info
+declare -i msearch=0            # boolean, set for --msearch
+declare -i op_declared=0        # boolean, if 1 an option has been specified
+declare -i search=0             # boolean, set for --search
+declare -i update=0             # boolean, set for --update
 
 # options
-declare -a options=()         # array, opts, used to prepare opts for parsing
-declare -a ignore=()          # array, pkgs to ignore
-declare -a repo_ignore=()     # array, repos to ignore
-declare -a group_ignore=()    # array, groups to ignore
 declare -a addignore=()       # array, used to turn CSV into an array
-declare -i force=0            # boolean, if 1 --force has been specified
+declare -a group_ignore=()    # array, groups to ignore
+declare -a ignore=()          # array, pkgs to ignore
+declare -a options=()         # array, opts, used to prepare opts for parsing
+declare -a repo_ignore=()     # array, repos to ignore
 declare -i check_git=0        # boolean, if 1 --git-check has been specified
 declare -i check_all=0        # boolean, if 1 --check-all has been specified
+declare -i force=0            # boolean, if 1 --force has been specified
+declare -i nossl=0            # boolean, if 1 --nossl has been specified
 declare -i threads=10         # integer, number of threads for cower to create
 declare -i timeout=10         # integer, cower's timeout time in seconds
-declare -i nossl=0            # boolean, if 1 --nossl has been specified
 
 ### stuff to download
-declare -a targets=()             # array, full list of targets
-declare -a pac_targets=()         # array, list of pacman targets
+declare -A checked_gits=()        # associative array, key is name, val is sum
 declare -a cow_targets=()         # stack, list of cower targets
-declare -i stack_size=0           # integer, size of cow_targets stack
 declare -a final_cow_targets=()   # array, cower targets in correct order
 declare -a git_ignore=()          # array, list of packages to ignore for git
-declare -A checked_gits=()        # associative array, key is name, val is sum
+declare -a pac_targets=()         # array, list of pacman targets
+declare -a targets=()             # array, full list of targets
+declare -i stack_size=0           # integer, size of cow_targets stack
 declare pkg=                      # used when parsing options
 
 ################################################################################
