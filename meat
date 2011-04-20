@@ -770,9 +770,8 @@ fi
 ((nossl)) && cower+=(--nossl)                       # nossl
 ((threads != 10)) && cower+=("--threads" "$2")      # threads
 
-# default options, config
+# default download dir, pass to cower
 cower+=(-t "$download_dir")
-pacman+=(--needed)
 
 # packages to ignore
 set_ignore_arrays
