@@ -225,7 +225,7 @@ download() {
       E) err "$pkg $info";;
       *) err "cower: $flag $pkg $info";;
     esac
-  done < <("${cower[@]}" -ddbf "$@")
+  done < <("${cower[@]}" -ddbf "$@" 2>&1)
 }
 
 ## print error, skip if -f is supplied, else die
