@@ -37,6 +37,7 @@
 #         mention that it's recommended to -Syu before installing              #
 #       figure out a better way to handle checking for git updates             #
 #         handle other VCS systems in the same way                             #
+#       find and eliminate redundancies                                        #
 #       attempt to minimize calls to pacman, or make it less "interactive"     #
 #       !!!!!efficiency!!!!!                                                   #
 #       all kinds of shit :(                                                   #
@@ -183,7 +184,7 @@ checkfiles() {
 
 ### clean up, clean up, everybody everywhere!
 cleanup() {
-  rm -f "/tmp/cowout.$$" "$tmp"
+  rm -f "$gitcheck_dir" "$tmp"
 }
     
 ## ask for confirmation
