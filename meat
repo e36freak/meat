@@ -472,10 +472,10 @@ runasroot() {
 set_ignore_arrays() {
   local IFS=,
   if [[ ${ignore[*]} ]]; then
-    cower+=(--ignore "${ignore[*]}")
+    cower+=(--ignore="${ignore[*]}")
     pacman+=(--ignore "${ignore[*]}")
   fi
-  [[ ${repo_ignore[*]} ]] && cower+=(--ignorerepo "${repo_ignore[*]}")
+  [[ ${repo_ignore[*]} ]] && cower+=(--ignorerepo="${repo_ignore[*]}")
   [[ ${group_ignore[*]} ]] && pacman+=(--ignoregroup "${group_ignore[*]}")
 }
 
