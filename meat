@@ -242,7 +242,7 @@ err() {
 ## update the git_sums_file for a given package
 # usage: git_addsum "name" "sum"
 git_addsum() {
-  local name=$1; sum=$2
+  local name=$1 sum=$2
   tmp=$(mktemp) || die "error creating temp file"
   {
     awk -v name="$name" '$1 != name' "$git_sums_file"
