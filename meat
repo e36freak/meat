@@ -135,21 +135,28 @@ aur_install() {
     # check if package is explicit, or installed as a dep, install accordingly
     if inarray "$pkg" "${targets[@]}"; then
       hide 1 runasroot "${pacman[@]}" -U *.pkg.tar.?z || {
-        err "something went wrong while installing \`$pkg'"; continue
+        hide 4 popd
+        err "something went wrong while installing \`$pkg'"
+        continue
       }
     else
       hide 1 runasroot "${pacman[@]}" -U --asdeps *.pkg.tar.?z || {
-        err "something went wrong while installing \`$pkg'"; continue
+        hide 4 popd
+        err "something went wrong while installing \`$pkg'"
+        continue
       }
     fi
 
     # if package is git, update sums file
-    ((check_git)) && [[ $pkg = *-git ]] || continue
+    ((check_git)) && [[ $pkg = *-git ]] || { hide 4 popd; continue; }
     if [[ ${checked_gits[$pkg]} ]]; then
       git_addsum "$pkg" "${checked_gits[$pkg]}"
     else
-      inarray "$pkg" "${git_ignore[@]}" && continue
-      { newsum=$(git_getsum "$pkg" 3>&1 >&4-); } 4>&1 || continue
+      inarray "$pkg" "${git_ignore[@]}" && { hide 4 popd; continue; }
+      { newsum=$(git_getsum "$pkg" 3>&1 >&4-); } 4>&1 || {
+        hide 4 popd
+        continue
+      }
       git_addsum "$pkg" "$newsum"
     fi
 
@@ -280,6 +287,7 @@ git_getsum() {
   # shallow git clone
   info 2 "cloning git repo for \`$pkg'"
   hide 2 git clone --depth 1 "$_gitroot" "$_gitname" || {
+    hide 4 popd
     warn 1 "$_gitname not found in github, check \`$_gitroot', skipping"
     return 1
   }
@@ -292,6 +300,7 @@ git_getsum() {
     }
     hide 4 popd && rm -rf "$_gitname" &>/dev/null
   else
+    hide 4 popd
     warn 1 "error changing dir for \`$pkg', skipping"
     return 1
   fi
