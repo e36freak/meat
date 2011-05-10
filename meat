@@ -184,7 +184,7 @@ checkfiles() {
 
 ### clean up, clean up, everybody everywhere!
 cleanup() {
-  rm -f "$gitcheck_dir" "$tmp"
+  rm -rf "$gitcheck_dir" "$tmp"
 }
     
 ## ask for confirmation
