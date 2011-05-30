@@ -182,7 +182,7 @@ checkfiles() {
   # allow for checking every other regular file
   if ((check_all)); then
     for file in ./**/!(PKGBUILD|"$install"); do
-      if [[ -f $file && -w $file ]]; then
+      if [[ -f $file && -w $file && $(file "$file") = *text ]]; then
         confirm "Edit \`$file'?" && "${EDITOR:-vi}" "$file"
       fi
     done
