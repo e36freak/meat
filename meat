@@ -737,7 +737,6 @@ while (($#)); do
     -?*)
       die "$1: invalid package name" \
           "all operations and options must be specified before packages"
-      shift
       ;;
     -)
       if [[ -t 0 ]]; then
