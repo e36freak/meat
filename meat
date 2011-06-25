@@ -171,19 +171,19 @@ checkfiles() {
   local install file pkg=$1
 
   ## allow user to edit PKGBUILD and $install
-  confirm "Edit PKGBUILD for \`$pkg'?" && "${EDITOR:-vi}" PKGBUILD
+  confirm "Edit PKGBUILD for \`$pkg'?" && ${EDITOR:-vi} PKGBUILD
 
   # source PKGBUILD for $install, prompt if exists
   source PKGBUILD
   if [[ $install ]]; then
-    confirm "Edit \`$install'?" && "${EDITOR:-vi}" "$install"
+    confirm "Edit \`$install'?" && ${EDITOR:-vi} "$install"
   fi
 
   # allow for checking every other regular file
   if ((check_all)); then
     for file in ./**/!(PKGBUILD|"$install"); do
       if [[ -f $file && -w $file && $(file "$file") = *text ]]; then
-        confirm "Edit \`$file'?" && "${EDITOR:-vi}" "$file"
+        confirm "Edit \`$file'?" && ${EDITOR:-vi} "$file"
       fi
     done
   fi
