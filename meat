@@ -24,9 +24,8 @@
 # FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS #
 # IN THE SOFTWARE.                                                             #
 #                                                                              #
-# Requires bash4, cower-git, awk                                               #
-# Optional deps: sudo (recommended, so that you're not constantly prompted)    #
-#                git (for handling automatic checking of git pkgs)             #
+# Requires bash4, cower-git, awk, sudo                                         #
+# Optional deps: git (for handling automatic checking of git pkgs)             #
 #                pacman-color (for colorized pacman output)                    #
 ################################################################################
 # TODO: pick a better name                                                     #
