@@ -24,9 +24,10 @@
 # FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS #
 # IN THE SOFTWARE.                                                             #
 #                                                                              #
-# Requires bash4, cower-git, awk, sudo                                         #
+# Requires bash4, cower-git, awk                                               #
 # Optional deps: git (for handling automatic checking of git pkgs)             #
 #                pacman-color (for colorized pacman output)                    #
+#                sudo (highly recommended)                                     #
 ################################################################################
 # TODO: pick a better name                                                     #
 #       find a better way to handle .install files?                            #
