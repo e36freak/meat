@@ -490,7 +490,7 @@ set_ignore_arrays() {
 ### full AUR upgrade for installed packages
 upgrade() {
   local pkg
-  ((check_git))  && gitcheck $(pacman -Qmq | grep -e '-git$')
+  ((check_git))  && gitcheck $(pacman -Qmqs -- -git$)
   coproc cowout { "${cower[@]}" -uq; } 2>&1 || die "cower error"
   while read -ru "${cowout[0]}" pkg; do
     targets+=("$pkg")
