@@ -133,6 +133,7 @@ aur_install() {
     done
 
     # check if package is explicit, or installed as a dep, install accordingly
+    info 1 "Installing \`$pkg'..."
     toinst=(*.pkg.tar.?z); ((${#toinst[@]})) || {
       die "error: no package file seems to have been created"
     }

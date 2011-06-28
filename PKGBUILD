@@ -27,6 +27,7 @@ build() {
   fi
 
   install -m 755 -D meat "$pkgdir/usr/bin/meat"
+  install -m 644 -D config "$pkgdir/usr/share/meat/config"
 }
 
 # vim: ft=sh syn=sh et
