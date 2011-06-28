@@ -56,7 +56,7 @@ declare lock_file=$cache_dir/meat.lck             # lock file
 declare -i gitcheck=1                   # boolean, '1' to check git for updates
 declare -i verbosity=1                  # integer, verbosity level
 declare color=0                         # boolean, '1' for color
-declare download_dir=/tmp/meat          # target directory for PKGBUILDs, etc
+declare download_dir=$(mktemp -d)       # target directory for PKGBUILDs, etc
 declare gitcheck_dir=$(mktemp -d)       # target directory for git cloning
 
 ### default programs
@@ -114,7 +114,7 @@ declare pkg=                      # used when parsing options
 ## build and install AUR packages
 # usage: aur_install "target dir" "targets"
 aur_install() {
-  local pkg newsum
+  local pkg newsum toinst
   hide 4 pushd "$download_dir" || die "could not cd to \`$download_dir'"
 
   # build and install
@@ -133,14 +133,17 @@ aur_install() {
     done
 
     # check if package is explicit, or installed as a dep, install accordingly
+    toinst=(*.pkg.tar.?z); ((${#toinst[@]})) || {
+      die "error: no package file seems to have been created"
+    }
     if inarray "$pkg" "${targets[@]}"; then
-      hide 1 runasroot "${pacman[@]}" -U *.pkg.tar.?z || {
+      hide 1 runasroot "${pacman[@]}" -U "${toinst[@]:(-1)}" || {
         hide 4 popd
         err "something went wrong while installing \`$pkg'"
         continue
       }
     else
-      hide 1 runasroot "${pacman[@]}" -U --asdeps *.pkg.tar.?z || {
+      hide 1 runasroot "${pacman[@]}" -U --asdeps "${toinst[@]:(-1)}" || {
         hide 4 popd
         err "something went wrong while installing \`$pkg'"
         continue
@@ -191,7 +194,7 @@ checkfiles() {
 
 ### clean up, clean up, everybody everywhere!
 cleanup() {
-  rm -rf "$gitcheck_dir" "$tmp"
+  rm -rf "$gitcheck_dir" "$tmp" "$download_dir"
 }
     
 ## ask for confirmation
