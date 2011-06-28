@@ -134,6 +134,12 @@ aur_install() {
 
     # check if package is explicit, or installed as a dep, install accordingly
     if inarray "$pkg" "${targets[@]}"; then
+      if ((color)) && [[ -t 1 ]]; then
+        printf "$green==> $reset$bold%s$reset" "Installing $pkg.."
+      else
+        printf "$bold==> %s$reset" "Installing $pkg.."
+      fi
+      echo
       hide 1 runasroot "${pacman[@]}" -U *.pkg.tar.?z || {
         hide 4 popd
         err "something went wrong while installing \`$pkg'"
@@ -535,6 +541,7 @@ Usage: meat <operation> [options] target(s)...
 
  Output options:
   -c, --color             use colored output
+  -C, --nocolor		  don't use colored output
       --debug             show debug output
       --format <string>   print package output according to format string
       --listdelim <delim> change list format delimeter
