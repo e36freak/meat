@@ -762,18 +762,19 @@ fi
 
 ## build cower and pacman base commands from options
 # verbosity
+### cower stuff has been commented out as a bug workaround
 if ((verbosity >= 3)); then
   if ((verbosity >= 4)); then
     pacman+=(--debug)
-    cower+=(--debug)
+    #cower+=(--debug)
   else
     pacman+=(-v)
-    cower+=(-v)
+    #cower+=(-v)
   fi
 elif ((! verbosity)); then
   pacman+=(-q)
-  cower+=(-q)
 fi
+cower+=(-q)
 
 ((timeout != 10)) && cower+=(--timeout "$timeout")  # timeout
 ((nossl)) && cower+=(--nossl)                       # nossl
