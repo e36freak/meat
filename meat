@@ -492,7 +492,7 @@ set_ignore_arrays() {
 upgrade() {
   local pkg
   ((check_git))  && gitcheck $(pacman -Qmqs -- -git$)
-  coproc cowout { "${cower[@]}" -uq; } 2>&1 || die "cower error"
+  coproc cowout { "${cower[@]}" -uq; } || die "cower error"
   while read -ru "${cowout[0]}" pkg; do
     targets+=("$pkg")
   done
