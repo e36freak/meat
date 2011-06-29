@@ -57,7 +57,9 @@ declare -i gitcheck=1                   # boolean, '1' to check git for updates
 declare -i verbosity=1                  # integer, verbosity level
 declare color=never                     # string, {always,auto,never}
 declare -a iscolor=(0 0)                # array, '1' for color on stdout,stderr
-declare download_dir=$(mktemp -d)       # target directory for PKGBUILDs, etc
+declare t_download_dir=$(mktemp -d)   # tmp target directory for PKGBUILDs, etc
+declare download_dir=                   # will be set for user-specified dir
+declare isuserddir=0                    # boolean, will be set if above is set
 declare gitcheck_dir=$(mktemp -d)       # target directory for git cloning
 
 ### default programs
@@ -196,7 +198,8 @@ checkfiles() {
 
 ### clean up, clean up, everybody everywhere!
 cleanup() {
-  rm -rf "$gitcheck_dir" "$tmp" "$download_dir"
+  rm -rf "$gitcheck_dir" "$tmp"
+  ((isuserddir)) || rm -rf "$download_dir"
 }
     
 ## ask for confirmation
@@ -590,6 +593,11 @@ if [[ -r $config_file ]]; then
     die "invalid value for \`timeout' in the config file: \`$timeout'"
   [[ $threads = *[![:digit:]]* ]] && \
     die "invalid value for \`threads' in the config file: \`$threads'"
+  if [[ $download_dir = "$t_download_dir" ]]; then
+    download_dir=$t_download_dir
+  else
+    isuserddir=1
+  fi
 else
   warn 1 "error sourcing config file \`$config_file'" \
          "reverting to default values"
