@@ -594,9 +594,9 @@ if [[ -r $config_file ]]; then
   [[ $threads = *[![:digit:]]* ]] && \
     die "invalid value for \`threads' in the config file: \`$threads'"
   if [[ $download_dir = "$t_download_dir" ]]; then
-    download_dir=$t_download_dir
-  else
     isuserddir=1
+  else
+    download_dir=$t_download_dir
   fi
 else
   warn 1 "error sourcing config file \`$config_file'" \
