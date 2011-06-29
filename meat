@@ -55,7 +55,8 @@ declare lock_file=$cache_dir/meat.lck             # lock file
 ### default values
 declare -i gitcheck=1                   # boolean, '1' to check git for updates
 declare -i verbosity=1                  # integer, verbosity level
-declare color=0                         # boolean, '1' for color
+declare color=never                     # string, {always,auto,never}
+declare -a iscolor=(0 0)                # array, '1' for color on stdout,stderr
 declare download_dir=$(mktemp -d)       # target directory for PKGBUILDs, etc
 declare gitcheck_dir=$(mktemp -d)       # target directory for git cloning
 
@@ -214,7 +215,7 @@ confirm() {
 ## print error message, exit
 # usage: die "messages"
 die() { 
-  if ((color)) && [[ -t 2 ]]; then
+  if ((iscolor[1])); then
     printf "$red%s:$reset" "error"
   else
     printf "$bold%s:$reset" "error"
@@ -448,7 +449,7 @@ print_targets() {
   echo
   
   # print title
-  if ((color)) && [[ -t 1 ]]; then
+  if ((iscolor[0])); then
     printf "${!col}%s$reset" "$title"
   else
     printf "$bold%s$reset" "$title"
@@ -504,7 +505,7 @@ upgrade() {
 
 ### print usage information
 usage() {
-  cat <<EOF
+  cat <<'EOF'
 meat 0.0.1-a1
 Usage: meat <operation> [options] target(s)...
 
@@ -538,7 +539,7 @@ Usage: meat <operation> [options] target(s)...
                           file in the package directory
 
  Output options:
-  -c, --color             use colored output
+  -c, --color <when>      use colored output. when is `never, always, or auto'
       --debug             show debug output
       --format <string>   print package output according to format string
       --listdelim <delim> change list format delimeter
@@ -556,7 +557,7 @@ EOF
 warn() { 
   local v=$1; shift
   ((verbosity >= v)) || return
-  if ((color)) && [[ -t 2 ]]; then
+  if ((iscolor[1])); then
     printf "$yellow%s:$reset" "warning"
   else
     printf "$bold%s:$reset" "warning"
@@ -577,16 +578,18 @@ if [[ -r $config_file ]]; then
   source "$config_file"
 
   # check that options are of the correct format
-  [[ $color = [01] ]] || \
-    die "invalid value for \`color' in the config file"
+  case $color in
+    always|auto|never) :;;
+    *) die "invalid value for \`color' in the config file: \`$color'";;
+  esac
   [[ $nossl = [01] ]] || \
-    die "invalid value for \`nossl' in the config file"
+    die "invalid value for \`nossl' in the config file: \`$nossl'"
   [[ $check_all = [01] ]] || \
-    die "invalid value for \`check_all' in the config file"
+    die "invalid value for \`check_all' in the config file: \`$check_all'"
   [[ $timeout = *[![:digit:]]* ]] && \
-    die "invalid value for \`timeout' in the config file"
+    die "invalid value for \`timeout' in the config file: \`$timeout'"
   [[ $threads = *[![:digit:]]* ]] && \
-    die "invalid value for \`threads' in the config file"
+    die "invalid value for \`threads' in the config file: \`$threads'"
 else
   warn 1 "error sourcing config file \`$config_file'" \
          "reverting to default values"
@@ -611,7 +614,7 @@ set -- "${options[@]}"
 
 # build commands, set operations, etc
 while [[ $1 = -?* ]]; do
-  case "$1" in
+  case $1 in
     # operations
     -h|--help|-\?) usage; exit;;
     -d|--download) 
@@ -648,7 +651,13 @@ while [[ $1 = -?* ]]; do
       ;;
 
     # options
-    -c|--color) color=1; shift;;
+    -c) color=auto; shift;;
+    --color)
+      case $2 in
+        always|auto|never) color=$2;;
+        *) die "invalid color type: $2";;
+      esac
+      shift 2;;
     -v|--verbose|--debug)
       if [[ $1 = --debug ]]; then
         verbosity=4
@@ -757,7 +766,23 @@ while (($#)); do
 done
 
 # color info
-if ((color)) && [[ -t 1 ]]; then
+case $color in
+  always) iscolor=(1 1);;
+  auto)
+    if [[ -t 1 ]]; then
+      iscolor[0]=1
+    else
+      iscolor[0]=0
+    fi
+    if [[ -t 2 ]]; then
+      iscolor[1]=1
+    else
+      iscolor[1]=0
+    fi
+    ;;
+  never) iscolor=(0 0);;
+esac
+if ((iscolor[0])); then
   type -P pacman-color &>/dev/null && pacman=(pacman-color) 
   cower+=(-c) 
 else

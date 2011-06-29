@@ -18,7 +18,7 @@
 # pacman-color can also be installed to have colorized pacman output, and is
 # also controlled through this option.
 #
-#color=1
+#color=auto
 
 # Connection timeout to be passed to cower (in seconds). Setting this to 0 
 # will disable timeouts. Default value is 10. Must be an integer.
