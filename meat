@@ -509,7 +509,7 @@ upgrade() {
 ### print usage information
 usage() {
   cat <<'EOF'
-meat 0.0.1-a1
+meat 0.0.1-a2
 Usage: meat <operation> [options] target(s)...
 
  Operations:
