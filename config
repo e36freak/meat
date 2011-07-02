@@ -13,10 +13,12 @@
 #
 #download_dir=/tmp/meat
 
-# Use color in the output. This is an integer used as a boolean value, either 
-# '0' or '1'. '1' is identical to passing -c, or --color, on the command line.
+# Use color in the output. This is a string used to determin use or color. 
+# {always,auto,never}. 'always' is identical to passing -c, on the command line.
 # pacman-color can also be installed to have colorized pacman output, and is
 # also controlled through this option.
+# If the command line option is supplied `--color={always,auto,never}` then
+# the value here will not be used..
 #
 #color=auto
 

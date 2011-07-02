@@ -750,15 +750,6 @@ done
 ((UID == 0)) && \
   die "do not run this script as root" \
       "you will prompted for the sudo/root password when needed"
-  
-# option error handling, format checking
-if ((op_declared > 1)); then
-  die 'only one operation may be specified'
-elif ((! op_declared)); then
-  die 'no operation specified'
-fi
-((git_check && ! update)) && \
-  die '--git-check may only be used with -u (--update)'
 
 # get targets, from stdin and positional parameters
 while (($#)); do
@@ -804,6 +795,15 @@ if ((iscolor[0])); then
 else
   makepkg+=(-m)
 fi
+
+# option error handling, format checking
+if ((op_declared > 1)); then
+  die 'only one operation may be specified'
+elif ((! op_declared)); then
+  die 'no operation specified'
+fi
+((git_check && ! update)) && \
+  die '--git-check may only be used with -u (--update)'
 
 ## build cower and pacman base commands from options
 # verbosity
