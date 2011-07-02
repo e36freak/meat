@@ -117,7 +117,7 @@ declare pkg=                      # used when parsing options
 ## build and install AUR packages
 # usage: aur_install "target dir" "targets"
 aur_install() {
-  local pkg newsum toinst
+  local pkg newsum toinst pkgs
   hide 4 pushd "$download_dir" || die "could not cd to \`$download_dir'"
 
   # build and install
@@ -137,17 +137,22 @@ aur_install() {
 
     # check if package is explicit, or installed as a dep, install accordingly
     info 1 "Installing \`$pkg'..."
-    toinst=(*.pkg.tar.?z); ((${#toinst[@]})) || {
+    pkgs=(*.pkg.tar.?z)
+    if ((! ${#pkgs[@]})); then
       die "error: no package file seems to have been created"
-    }
+    elif ((${#pkgs[@]} == 1)); then
+      toinst=$pkgs
+    else
+      IFS= read -rd '' toinst < <(printf '%s\0' "${pkgs[@]}" | sort -Vrz)
+    fi
     if inarray "$pkg" "${targets[@]}"; then
-      hide 1 runasroot "${pacman[@]}" -U "${toinst[@]:(-1)}" || {
+      hide 1 runasroot "${pacman[@]}" -U "$toinst" || {
         hide 4 popd
         err "something went wrong while installing \`$pkg'"
         continue
       }
     else
-      hide 1 runasroot "${pacman[@]}" -U --asdeps "${toinst[@]:(-1)}" || {
+      hide 1 runasroot "${pacman[@]}" -U --asdeps "$toinst" || {
         hide 4 popd
         err "something went wrong while installing \`$pkg'"
         continue
