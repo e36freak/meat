@@ -582,6 +582,14 @@ if [[ -r $config_file ]]; then
 
   # check that options are of the correct format
   case $color in
+    [01]) info 1 "the boolean value for color is deprecated." \
+                 "please change the config to {always,auto,never}"
+          if ((color)); then  
+            color=auto
+          else
+            color=never
+          fi
+          ;;
     always|auto|never) :;;
     *) die "invalid value for \`color' in the config file: \`$color'";;
   esac
