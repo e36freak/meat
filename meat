@@ -490,6 +490,26 @@ runasroot() {
   fi
 }
 
+### sets the color arrays based on options
+set_colors() {
+  case $color in
+    always) iscolor=(1 1);;
+    auto)
+      if [[ -t 1 ]]; then
+        iscolor[0]=1
+      else
+        iscolor[0]=0
+      fi
+      if [[ -t 2 ]]; then
+        iscolor[1]=1
+      else
+        iscolor[1]=0
+      fi
+      ;;
+    never) iscolor=(0 0);;
+  esac
+}
+
 ### build arrays to ignore packages
 set_ignore_arrays() {
   local IFS=,
@@ -615,6 +635,8 @@ else
   warn 1 "error sourcing config file \`$config_file'" \
          "reverting to default values"
 fi
+
+set_colors
 
 ## parse options
 # iterate through the arguments, separate combined arguments
@@ -751,6 +773,8 @@ while [[ $1 = -?* ]]; do
   esac
 done
 
+set_colors
+
 ## this script should not be run as root!
 ((UID == 0)) && \
   die "do not run this script as root" \
@@ -787,22 +811,6 @@ while (($#)); do
 done
 
 # color info
-case $color in
-  always) iscolor=(1 1);;
-  auto)
-    if [[ -t 1 ]]; then
-      iscolor[0]=1
-    else
-      iscolor[0]=0
-    fi
-    if [[ -t 2 ]]; then
-      iscolor[1]=1
-    else
-      iscolor[1]=0
-    fi
-    ;;
-  never) iscolor=(0 0);;
-esac
 if ((iscolor[0])); then
   type -P pacman-color &>/dev/null && pacman=(pacman-color) 
   cower+=(-c) 
