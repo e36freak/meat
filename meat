@@ -618,6 +618,7 @@ if [[ -r $config_file ]]; then
     always|auto|never) :;;
     *) die "invalid value for \`color' in the config file: \`$color'";;
   esac
+  set_colors
   [[ $nossl = [01] ]] || \
     die "invalid value for \`nossl' in the config file: \`$nossl'"
   [[ $check_all = [01] ]] || \
@@ -635,7 +636,6 @@ else
          "reverting to default values"
 fi
 
-set_colors
 
 ## parse options
 # iterate through the arguments, separate combined arguments
@@ -772,7 +772,6 @@ while [[ $1 = -?* ]]; do
   esac
 done
 
-set_colors
 
 ## this script should not be run as root!
 ((UID == 0)) && \
