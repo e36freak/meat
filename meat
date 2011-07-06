@@ -216,7 +216,7 @@ confirm() {
   [[ -t 0 ]] || exec </dev/tty
 
   # actually print the prompt, return according to response
-  read -p "$bold$1$reset [Y/n] " reply
+  read -p "$bold$1$reset [Y/n] " reply >/dev/tty
   [[ -z $reply || $reply = y?(es) ]]
 }
 
