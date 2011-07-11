@@ -632,8 +632,14 @@ if [[ -r $config_file ]]; then
     isuserddir=1
   fi
 else
-  warn 1 "error sourcing config file \`$config_file'" \
-         "reverting to default values"
+  if [[ -e $cache_dir/.firstrun ]]; then
+    warn 1 "error sourcing config file \`$config_file'" \
+           "reverting to default values." \
+           "a default config can be found in \`/usr/share/meat'"
+  else
+    touch "$cache_dir/.firstrun"
+    info 1 "a sample config file can be found in \`/usr/share/meat'"
+           "please copy it to \`$config_file' and edit to taste"
 fi
 
 
