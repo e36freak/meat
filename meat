@@ -640,6 +640,7 @@ else
     touch "$cache_dir/.firstrun"
     info 1 "a sample config file can be found in \`/usr/share/meat'"
            "please copy it to \`$config_file' and edit to taste"
+  fi
 fi
 
 
