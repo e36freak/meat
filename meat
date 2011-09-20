@@ -294,7 +294,7 @@ git_getsum() {
   }
       
   # create directory to check git packages, change to dir
-  mkdir -p "$gitcheck_dir" && hide 4 pushd "$gitcheck_dir" || \
+  mkdir -p "$gitcheck_dir" && hide 4 pushd "$gitcheck_dir" ||
     die "error creating gitcheck directory \`$gitcheck_dir'"
 
   # shallow git clone
@@ -334,7 +334,7 @@ gitcheck() {
     inarray "$pkg" "${git_ignore[@]}" && continue
 
     # get old md5sum from file
-    oldsum=$(awk -v name="$pkg" '$1 == name{print $2}' "$git_sums_file") || \
+    oldsum=$(awk -v name="$pkg" '$1 == name{print $2}' "$git_sums_file") ||
       continue
 
     # get new/current md5sum
@@ -619,13 +619,13 @@ if [[ -r $config_file ]]; then
     *) die "invalid value for \`color' in the config file: \`$color'";;
   esac
   set_colors
-  [[ $nossl = [01] ]] || \
+  [[ $nossl = [01] ]] ||
     die "invalid value for \`nossl' in the config file: \`$nossl'"
-  [[ $check_all = [01] ]] || \
+  [[ $check_all = [01] ]] ||
     die "invalid value for \`check_all' in the config file: \`$check_all'"
-  [[ $timeout = *[![:digit:]]* ]] && \
+  [[ $timeout = *[![:digit:]]* ]] &&
     die "invalid value for \`timeout' in the config file: \`$timeout'"
-  [[ $threads = *[![:digit:]]* ]] && \
+  [[ $threads = *[![:digit:]]* ]] &&
     die "invalid value for \`threads' in the config file: \`$threads'"
   if [[ $download_dir != "$t_download_dir" ]]; then
     download_dir=$t_download_dir
@@ -781,7 +781,7 @@ done
 
 
 ## this script should not be run as root!
-((UID == 0)) && \
+((UID == 0)) &&
   die "do not run this script as root" \
       "you will prompted for the sudo/root password when needed"
   
@@ -791,7 +791,7 @@ if ((op_declared > 1)); then
 elif ((! op_declared)); then
   die 'no operation specified'
 fi
-((git_check && ! update)) && \
+((git_check && ! update)) &&
   die '--git-check may only be used with -u (--update)'
 
 # get targets, from stdin and positional parameters
@@ -851,14 +851,14 @@ set_ignore_arrays
 
 ### files and directories
 # make sure download dir exists
-mkdir -p "$download_dir" || \
+mkdir -p "$download_dir" ||
   die "download dir \`$download_dir' can't be created" \
       "check permissions"
 # create cache dir, if not existing
-mkdir -p "$cache_dir" || \
+mkdir -p "$cache_dir" ||
   die "cache directory \`$cache_dir' does not exist and could not be created"
 # create git sums file, if not existing
-touch "$git_sums_file" || \
+touch "$git_sums_file" ||
   die "\`$git_sums_file' does not exist and could not be created"
 
 ### lock file handling
