@@ -1,0 +1,43 @@
+meat 0.0.1-a2
+Usage: meat <operation> [options] target(s)...
+
+ Operations:
+  -d, --download          download and install target(s) -- dependencies will be
+                          automatically resolved
+  -G, --git-db-update     updates the git database with new sums, without
+                          actually installing anything (unstable).
+  -h, --help              display this help and exit
+  -i, --info              show info for target(s) -- pass twice for more detail
+  -m, --mesearch          show packages maintained by target(s)
+  -s, --search            search AUR for target(s)
+  -u, --update            check for updates against AUR and install them
+  -U, --listupdates       check for updates against AUR and print them -- acts
+                          the same way as cower -u
+
+  only one operation may be specified.
+
+ General options:
+  -f, --force             no matter what happens, keep going -- this option is
+                          not recommended to be used
+  -g, --git-check         check and update checksums for git files. (unstable)
+      --ignoregit         ignore a package when checking for git updates.
+      --ignore <pkg>      ignore a package upgrade (can be used more than once)
+      --ignorerepo <repo> ignore a binary repo (can be used more than once)
+      --nossl             do not use https connections
+  -t, --target <dir>      specify an alternate download directory
+      --threads <num>     limit number of threads created
+      --timeout <num>     specify connection timeout in seconds
+      --check-all         when installing, prompts you to check every regular
+                          file in the package directory
+
+ Output options:
+  -c, --color <when>      use colored output. when is `never, always, or auto'
+      --debug             show debug output
+      --format <string>   print package output according to format string
+      --listdelim <delim> change list format delimeter
+  -q, --quiet             output less
+  -v, --verbose           output more
+
+ Targets:
+  meat accepts a list of targets, space separated. If any target is the single
+  character '-', it will also read a list of packages from stdin, one per line.
