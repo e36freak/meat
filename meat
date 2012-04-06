@@ -544,7 +544,7 @@ Usage: meat <operation> [options] target(s)...
                           actually installing anything (unstable).
   -h, --help              display this help and exit
   -i, --info              show info for target(s) -- pass twice for more detail
-  -m, --mesearch          show packages maintained by target(s)
+  -m, --msearch           show packages maintained by target(s)
   -s, --search            search AUR for target(s)
   -u, --update            check for updates against AUR and install them
   -U, --listupdates       check for updates against AUR and print them -- acts
