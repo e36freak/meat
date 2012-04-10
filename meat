@@ -535,7 +535,7 @@ upgrade() {
 usage() {
   cat <<'EOF'
 meat 0.0.1-a2
-Usage: meat <operation> [options] target(s)...
+Usage: meat OPERATION [OPTIONS] TARGET ...
 
  Operations:
   -d, --download          download and install target(s) -- dependencies will be
@@ -553,24 +553,24 @@ Usage: meat <operation> [options] target(s)...
   only one operation may be specified.
 
  General options:
-  -f, --force             no matter what happens, keep going -- this option is
-                          not recommended to be used
+  -f, --force             no matter what happens, keep going -- using this
+                          option is not recommended
   -g, --git-check         check and update checksums for git files. (unstable)
-      --ignoregit         ignore a package when checking for git updates.
-      --ignore <pkg>      ignore a package upgrade (can be used more than once)
-      --ignorerepo <repo> ignore a binary repo (can be used more than once)
+      --ignoregit PKG     ignore PKG when checking for git updates.
+      --ignore PKG        ignore PKG when upgrading (can be used more than once)
+      --ignorerepo REPO   ignore a binary repo (can be used more than once)
       --nossl             do not use https connections
-  -t, --target <dir>      specify an alternate download directory
-      --threads <num>     limit number of threads created
-      --timeout <num>     specify connection timeout in seconds
+  -t, --target DIR        download to DIR
+      --threads NUM       limit number of threads created to NUM
+      --timeout NUM       specify connection timeout in seconds
       --check-all         when installing, prompts you to check every regular
                           file in the package directory
 
  Output options:
-  -c, --color <when>      use colored output. when is `never, always, or auto'
+  -c, --color WHEN        use colored output. WHEN is `never, always, or auto'
       --debug             show debug output
-      --format <string>   print package output according to format string
-      --listdelim <delim> change list format delimeter
+      --format STRING     print package output according to STRING
+      --listdelim DELIM   change list format delimeter to DELIM
   -q, --quiet             output less
   -v, --verbose           output more
 
