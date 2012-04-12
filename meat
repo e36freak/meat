@@ -47,69 +47,70 @@
 shopt -s extglob dotglob globstar nullglob
 
 ### files
-declare config_file=${XDG_CONFIG_HOME:-$HOME/.config}/meat/config # config file
-declare cache_dir=${XDG_CACHE_HOME:-$HOME/.cache}/meat            # cache dir
-declare git_sums_file=$cache_dir/gitsums          # git checksums file
-declare lock_file=$cache_dir/meat.lck             # lock file
+config_file=${XDG_CONFIG_HOME:-$HOME/.config}/meat/config # config file
+cache_dir=${XDG_CACHE_HOME:-$HOME/.cache}/meat            # cache dir
+git_sums_file=$cache_dir/gitsums          # git checksums file
+lock_file=$cache_dir/meat.lck             # lock file
 
 ### default values
-declare -i gitcheck=1                   # boolean, '1' to check git for updates
-declare -i verbosity=1                  # integer, verbosity level
-declare color=never                     # string, {always,auto,never}
-declare -a iscolor=(0 0)                # array, '1' for color on stdout,stderr
-declare t_download_dir=$(mktemp -d)   # tmp target directory for PKGBUILDs, etc
-declare download_dir=$t_download_dir    # will be set for user-specified dir
-declare isuserddir=0                    # boolean, will be set if above is set
-declare gitcheck_dir=$(mktemp -d)       # target directory for git cloning
+gitcheck=1                      # boolean, '1' to check git for updates
+verbosity=1                     # integer, verbosity level
+color=never                     # string, {always,auto,never}
+iscolor=(0 0)                   # array, '1' for color on stdout,stderr
+t_download_dir=$(mktemp -d)     # tmp target directory for PKGBUILDs, etc
+download_dir=$t_download_dir    # will be set for user-specified dir
+isuserddir=0                    # boolean, will be set if above is set
+gitcheck_dir=$(mktemp -d)       # target directory for git cloning
 
 ### default programs
-declare -a cower=(cower)          # array, cower command and opts
-declare -a makepkg=(makepkg)      # array, makepkg command and opts
-declare -a pacman=(pacman)        # array, pacman command and opts
+cower=(cower)          # array, cower command and opts
+makepkg=(makepkg)      # array, makepkg command and opts
+pacman=(pacman)        # array, pacman command and opts
 
 ### global variables
 # color handling
-declare red=$(tput bold; tput setaf 1)      # bold red
-declare green=$(tput bold; tput setaf 2)    # bold green
-declare yellow=$(tput bold; tput setaf 3)   # bold yellow
-declare blue=$(tput bold; tput setaf 4)     # bold blue
-declare bold=$(tput bold)                   # bold white
-declare reset=$(tput sgr0)                  # reset colors
+red=$(tput bold; tput setaf 1)      # bold red
+green=$(tput bold; tput setaf 2)    # bold green
+yellow=$(tput bold; tput setaf 3)   # bold yellow
+blue=$(tput bold; tput setaf 4)     # bold blue
+bold=$(tput bold)                   # bold white
+reset=$(tput sgr0)                  # reset colors
 
 ### option handling
 # operations
-declare -i download=0           # boolean, set for --download
-declare -i full_update=0        # boolean, set for hidden --fullupdate operation
-declare -i git_db_update=0      # boolean, set for --git-db-update
-declare -i info_level=0         # integer, for how many '-i's to pass to cower
-                                  # also used for checking for --info
-declare -i msearch=0            # boolean, set for --msearch
-declare -i op_declared=0        # boolean, if 1 an option has been specified
-declare -i search=0             # boolean, set for --search
-declare -i update=0             # boolean, set for --update
+download=0           # boolean, set for --download
+full_update=0        # boolean, set for hidden --fullupdate operation
+git_db_update=0      # boolean, set for --git-db-update
+info_level=0         # integer, for how many '-i's to pass to cower
+                       # also used for checking for --info
+msearch=0            # boolean, set for --msearch
+op_declared=0        # boolean, if 1 an option has been specified
+search=0             # boolean, set for --search
+update=0             # boolean, set for --update
 
 # options
-declare -a addignore=()       # array, used to turn CSV into an array
-declare -a group_ignore=()    # array, groups to ignore
-declare -a ignore=()          # array, pkgs to ignore
-declare -a options=()         # array, opts, used to prepare opts for parsing
-declare -a repo_ignore=()     # array, repos to ignore
-declare -i check_git=0        # boolean, if 1 --git-check has been specified
-declare -i check_all=0        # boolean, if 1 --check-all has been specified
-declare -i force=0            # boolean, if 1 --force has been specified
-declare -i nossl=0            # boolean, if 1 --nossl has been specified
-declare -i threads=10         # integer, number of threads for cower to create
-declare -i timeout=10         # integer, cower's timeout time in seconds
+addignore=()       # array, used to turn CSV into an array
+group_ignore=()    # array, groups to ignore
+ignore=()          # array, pkgs to ignore
+options=()         # array, opts, used to prepare opts for parsing
+optarg=            # used for parsing --foo=bar options
+repo_ignore=()     # array, repos to ignore
+check_git=0        # boolean, if 1 --git-check has been specified
+check_all=0        # boolean, if 1 --check-all has been specified
+force=0            # boolean, if 1 --force has been specified
+nossl=0            # boolean, if 1 --nossl has been specified
+threads=10         # integer, number of threads for cower to create
+timeout=10         # integer, cower's timeout time in seconds
 
 ### stuff to download
-declare -A checked_gits=()        # associative array, key is name, val is sum
-declare -a cow_targets=()         # stack, list of cower targets
-declare -a final_cow_targets=()   # array, cower targets in correct order
-declare -a git_ignore=()          # array, list of packages to ignore for git
-declare -a pac_targets=()         # array, list of pacman targets
-declare -a targets=()             # array, full list of targets
-declare -i stack_size=0           # integer, size of cow_targets stack
-declare pkg=                      # used when parsing options
+declare -A checked_gits=()  # associative array, key is name, val is sum
+cow_targets=()              # stack, list of cower targets
+final_cow_targets=()        # array, cower targets in correct order
+git_ignore=()               # array, list of packages to ignore for git
+pac_targets=()              # array, list of pacman targets
+targets=()                  # array, full list of targets
+stack_size=0                # integer, size of cow_targets stack
+pkg=                        # used when parsing options
 
 ################################################################################
 ### Functions
@@ -534,15 +535,15 @@ upgrade() {
 ### print usage information
 usage() {
   cat <<'EOF'
-meat 0.0.1-a2
+meat 0.0.1-b1
 Usage: meat OPERATION [OPTIONS] TARGET ...
 
  Operations:
+  -h, --help              display this help and exit
   -d, --download          download and install target(s) -- dependencies will be
                           automatically resolved
   -G, --git-db-update     updates the git database with new sums, without
                           actually installing anything (unstable).
-  -h, --help              display this help and exit
   -i, --info              show info for target(s) -- pass twice for more detail
   -m, --msearch           show packages maintained by target(s)
   -s, --search            search AUR for target(s)
@@ -556,23 +557,30 @@ Usage: meat OPERATION [OPTIONS] TARGET ...
   -f, --force             no matter what happens, keep going -- using this
                           option is not recommended
   -g, --git-check         check and update checksums for git files. (unstable)
-      --ignoregit PKG     ignore PKG when checking for git updates.
-      --ignore PKG        ignore PKG when upgrading (can be used more than once)
-      --ignorerepo REPO   ignore a binary repo (can be used more than once)
+      --ignoregit PKG     ignore PKG when checking for git updates. PKG is a 
+                          comma-separated list of packages. may be used more
+                          than once
+      --ignore PKG        ignore PKG when upgrading. PKG is a comma-separated
+                          list of packages. may be used more than once
+      --ignorerepo REPO   ignore a binary repo. REPO is a comma-separated list
+                          of repositories. may be used more than once
       --nossl             do not use https connections
-  -t, --target DIR        download to DIR
+  -t, --target DIR        download to DIR, instead of "${TMPDIR:-/tmp}"
       --threads NUM       limit number of threads created to NUM
       --timeout NUM       specify connection timeout in seconds
       --check-all         when installing, prompts you to check every regular
-                          file in the package directory
+                          file in the package directory instead of just the
+                          PKGBUILD and .install files
 
  Output options:
-  -c, --color WHEN        use colored output. WHEN is `never, always, or auto'
+  -c, --color[=WHEN]      use colored output. WHEN is `never, always, or auto'
       --debug             show debug output
       --format STRING     print package output according to STRING
       --listdelim DELIM   change list format delimeter to DELIM
-  -q, --quiet             output less
-  -v, --verbose           output more
+  -q, --quiet             output less. if both -q and -v are used, each -q is
+                          equivalent to removing a -v
+  -v, --verbose           output more. may be specified multiple times for even
+                          more information
 
  Targets:
   meat accepts a list of targets, space separated. If any target is the single
@@ -645,126 +653,181 @@ fi
 
 
 ## parse options
-# iterate through the arguments, separate combined arguments
+# option string for splitting short options, any letter followed by a ':' takes
+# a required argument
+optstring=hdGimsuUfgt:cqv
+
+# iterate over options, breaking -ab into -a -b. also turns -- into --endopts to
+# avoid issues with things like '-o-', the '-' should not indicate the end of
+# options, but be an invalid option (or the option's arg, such as wget -qO-)
+unset options
 while (($#)); do
   case $1 in
+    # if option is of type -ab
     -[!-]?*)
+      # loop over each character starting with the second
       for ((i=1; i<${#1}; i++)); do
-        options+=("-${1:i:1}")
+        c=${1:i:1}
+        
+        # add current char to options
+        options+=("-$c")
+
+        # if option takes a required argument, and it's not the last char
+        # make the rest of the string its argument
+        if [[ $optstring = *"$c:"* && ${1:i+1} ]]; then
+          options+=("${1:i+1}")
+          break
+        fi
       done
       ;;
-    --?*=*) options+=("${1%%=*}" "${1#*=}");;
+    # add --endopts for --
     --) options+=(--endopts);;
+    # otherwise, nothing special
     *) options+=("$1");;
   esac
+
   shift
 done
+# set new positional parameters to altered options
 set -- "${options[@]}"
+unset options
 
 # build commands, set operations, etc
 while [[ $1 = -?* ]]; do
   case $1 in
     # operations
-    -h|--help|-\?) usage; exit;;
-    -d|--download) 
-      ((op_declared++))
-      download=1; shift
-      ;;
-    -i|--info)
-      ((! info_level && op_declared++))
-      ((info_level++)); shift
-      ;;
-    -m|--msearch)
-      ((op_declared++))
-      msearch=1; shift
-      ;;
-    -s|--search)
-      ((op_declared++))
-      search=1; shift
-      ;;
-    -u|--update)
-      ((op_declared++))
-      update=1; shift
-      ;;
-    -U|--listupdates)
-      ((op_declared++))
-      list_updates=1; shift
-      ;;
-    -G|--git-db-update)
-      ((op_declared++))
-      git_db_update=1; shift
-      ;;
-    --fullupdate)
-      ((op_declared++))
-      full_update=1; shift
-      ;;
+    -h|--help|-\?) usage >&2; exit;;
+    -d|--download) ((op_declared++)); download=1;;
+    -i|--info) ((!info_level && op_declared++)); ((info_level++));;
+    -m|--msearch) ((op_declared++)); msearch=1;;
+    -s|--search) ((op_declared++)); search=1;;
+    -u|--update) ((op_declared++)); update=1;;
+    -U|--listupdates) ((op_declared++)); list_updates=1;;
+    -G|--git-db-update) ((op_declared++)); git_db_update=1;;
+    --fullupdate) ((op_declared++)); full_update=1;;
 
     # options
-    -c) color=auto; shift;;
-    --color)
-      case $2 in
-        always|auto|never) color=$2;;
-        *) die "invalid color type: $2";;
-      esac
-      shift 2;;
+    -c|--color?(=*))
+      if [[ $1 = --color=* ]]; then
+        optarg=${1#*=}
+        case $optarg in
+          always|auto|never) color=$optarg;;
+          *) die "invalid color type: $optarg";;
+        esac
+      else
+        color=auto
+      fi
+      ;;
     -v|--verbose|--debug)
       if [[ $1 = --debug ]]; then
         verbosity=4
       else
         ((verbosity++))
       fi
-      shift
       ;;
-    -q|--quiet) ((verbosity > 0 && verbosity--)); shift;;
-    -f|--force) force=1; shift;;
-    --format) cower+=("--format" "$2"); shift 2;;
-    --ignore)
-      [[ $2 = *\ * ]] && die "invalid ignore list format: $2"
-      [[ $2 = -* ]] && die "no --ignore targets specified"
-      IFS=, read -ra addignore <<<"$2"
+    -q|--quiet) ((verbosity > 0 && verbosity--));;
+    -f|--force) force=1;;
+    --format?(=*))
+      if [[ $1 = --format=* ]]; then
+        cower+=("--format" "${1#*=}")
+      elif [[ $2 ]]; then
+        cower+=("--format" "$2")
+      else
+        die "no format given for $1"
+      fi
+      ;;
+    --ignore?(=*))
+      if [[ $1 = --ignore=* ]]; then
+        optarg=${1#*=}
+      elif [[ $2 ]]; then
+        optarg=$2
+        shift
+      else 
+        die "no targets given for $1"
+      fi
+      [[ $optarg = *\ * ]] && die "invalid ignore list format for $1"
+
+      IFS=, read -ra addignore <<<"$optarg"
       ignore+=("${addignore[@]}")
-      shift 2
       ;;
-    --ignorerepo)
-      [[ $2 = *\ * ]] && die "invalid repo ignore list format: $2"
-      [[ $2 = -* ]] && die "no --ignorerepo targets specified"
-      IFS=, read -ra addignore <<<"$2"
+    --ignorerepo?(=*))
+      if [[ $1 = --ignorerepo=* ]]; then
+        optarg=${1#*=}
+      elif [[ $2 ]]; then
+        optarg=$2
+        shift
+      else 
+        die "no targets given for $1"
+      fi
+      [[ $optarg = *\ * ]] && die "invalid ignore list format for $1"
+
+      IFS=, read -ra addignore <<<"$optarg"
       repo_ignore+=("${addignore[@]}")
-      shift 2
       ;;
-    --ignoregroup)
-      [[ $2 = *\ * ]] && die "invalid group ignore list format: $2"
-      [[ $2 = -* ]] && die "no --ignoregroup targets specified"
-      IFS=, read -ra addignore <<<"$2"
+    --ignoregroup?(=*))
+      if [[ $1 = --ignoregroup=* ]]; then
+        optarg=${1#*=}
+      elif [[ $2 ]]; then
+        optarg=$2
+        shift
+      else 
+        die "no targets given for $1"
+      fi
+      [[ $optarg = *\ * ]] && die "invalid ignore list format for $1"
+
+      IFS=, read -ra addignore <<<"$optarg"
       group_ignore+=("${addignore[@]}")
-      shift 2
       ;;
-    --ignoregit)
-      [[ $2 = *\ * ]] && die "invalid git ignore list format: $2"
-      [[ $2 = -* ]] && die "no --gitignore targets specified"
-      IFS=, read -ra addignore <<<"$2"
+    --ignoregit?(=*))
+      if [[ $1 = --ignoregit=* ]]; then
+        optarg=${1#*=}
+      elif [[ $2 ]]; then
+        optarg=$2
+        shift
+      else 
+        die "no targets given for $1"
+      fi
+      [[ $optarg = *\ * ]] && die "invalid ignore list format for $1"
+
+      IFS=, read -ra addignore <<<"$optarg"
       git_ignore+=("${addignore[@]}")
-      shift 2
       ;;
-    --nossl) nossl=1; shift;;
-    -t|--target)
-      [[ $2 = -* ]] && die "no target specified"
-      download_dir=$2; shift 2
+    --nossl) nossl=1;;
+    -t|--target?(=*))
+      if [[ $1 = --target=* ]]; then
+        optarg=${1#*=}
+      elif [[ $2 ]]; then
+        optarg=$2
+        shift
+      else
+        die "no target specified for $1"
+      fi
+      download_dir=$optarg
       ;;
-    --threads)
-      [[ $2 = +([[:digit:]]) ]] || {
+    --threads?(=*))
+      if [[ $1 = --threads=* ]]; then
+        optarg=${1#*=}
+      elif [[ $2 = +([[:digit:]]) ]]; then
+        optarg=$2
+        shift
+      else
         die "invalid number of threads: $2"
-      } 
-      threads=$2; shift 2
+      fi
+      threads=$optarg
       ;;
     --timeout)
-      [[ $2 = +([[:digit:]]) ]] || {
+      if [[ $1 = --timeout=* ]]; then
+        optarg=${1#*=}
+      elif [[ $2 = +([[:digit:]]) ]]; then
+        optarg=$2
+        shift
+      else
         die "invalid value for timeout: $2"
-      }
-      timeout=$2; shift 2
+      fi
+      timeout=$optarg
       ;;
-    -g|--git-check) check_git=1; shift;;
-    --check-all) check_all=1; shift;;
+    -g|--git-check) check_git=1;;
+    --check-all) check_all=1;;
 
     # end of options
     --endopts) shift; break;;
@@ -777,6 +840,8 @@ while [[ $1 = -?* ]]; do
       esac
       ;;
   esac
+
+  shift
 done
 
 
