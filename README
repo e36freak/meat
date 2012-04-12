@@ -1,12 +1,12 @@
-meat 0.0.1-a2
+meat 0.0.1-b1
 Usage: meat OPERATION [OPTIONS] TARGET ...
 
  Operations:
+  -h, --help              display this help and exit
   -d, --download          download and install target(s) -- dependencies will be
                           automatically resolved
   -G, --git-db-update     updates the git database with new sums, without
                           actually installing anything (unstable).
-  -h, --help              display this help and exit
   -i, --info              show info for target(s) -- pass twice for more detail
   -m, --msearch           show packages maintained by target(s)
   -s, --search            search AUR for target(s)
@@ -20,23 +20,30 @@ Usage: meat OPERATION [OPTIONS] TARGET ...
   -f, --force             no matter what happens, keep going -- using this
                           option is not recommended
   -g, --git-check         check and update checksums for git files. (unstable)
-      --ignoregit PKG     ignore PKG when checking for git updates.
-      --ignore PKG        ignore PKG when upgrading (can be used more than once)
-      --ignorerepo REPO   ignore a binary repo (can be used more than once)
+      --ignoregit PKG     ignore PKG when checking for git updates. PKG is a 
+                          comma-separated list of packages. may be used more
+                          than once
+      --ignore PKG        ignore PKG when upgrading. PKG is a comma-separated
+                          list of packages. may be used more than once
+      --ignorerepo REPO   ignore a binary repo. REPO is a comma-separated list
+                          of repositories. may be used more than once
       --nossl             do not use https connections
-  -t, --target DIR        download to DIR
+  -t, --target DIR        download to DIR, instead of "${TMPDIR:-/tmp}"
       --threads NUM       limit number of threads created to NUM
       --timeout NUM       specify connection timeout in seconds
       --check-all         when installing, prompts you to check every regular
-                          file in the package directory
+                          file in the package directory instead of just the
+                          PKGBUILD and .install files
 
  Output options:
-  -c, --color WHEN        use colored output. WHEN is `never, always, or auto'
+  -c, --color[=WHEN]      use colored output. WHEN is `never, always, or auto'
       --debug             show debug output
       --format STRING     print package output according to STRING
       --listdelim DELIM   change list format delimeter to DELIM
-  -q, --quiet             output less
-  -v, --verbose           output more
+  -q, --quiet             output less. if both -q and -v are used, each -q is
+                          equivalent to removing a -v
+  -v, --verbose           output more. may be specified multiple times for even
+                          more information
 
  Targets:
   meat accepts a list of targets, space separated. If any target is the single
