@@ -956,7 +956,7 @@ elif ((msearch)); then
 
 # --search, -s
 elif ((search)); then
-  ((targets_le)) || die "no targets specified"
+  ((targets_len)) || die "no targets specified"
   "${cower[@]}" -s "${targets[@]}"
 
 # --update, -u
