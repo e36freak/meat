@@ -933,14 +933,16 @@ flock -n 9 || die "only one instance of meat may be running at a time." \
                   "remove \`$lock_file'"
                 
 ## finally, we get to do shit!!!
+# storing this, prevent multiple C calls to calculate array length
+targets_len=${#targets[@]}
 # --download, -d
 if ((download)); then
-  ((${#targets[@]})) || die "no targets specified"
+  ((targets_len})) || die "no targets specified"
   install_all
 
 # --info, -i
 elif ((info_level)); then
-  ((${#targets[@]})) || die "no targets specified"
+  ((targets_len)) || die "no targets specified"
   if ((info_level == 1)); then
     "${cower[@]}" -i "${targets[@]}"
   else
@@ -949,12 +951,12 @@ elif ((info_level)); then
 
 # --msearch, -m
 elif ((msearch)); then
-  ((${#targets[@]})) || die "no targets specified"
+  ((targets_len)) || die "no targets specified"
   "${cower[@]}" -m "${targets[@]}"
 
 # --search, -s
 elif ((search)); then
-  ((${#targets[@]})) || die "no targets specified"
+  ((targets_len)) || die "no targets specified"
   "${cower[@]}" -s "${targets[@]}"
 
 # --update, -u
@@ -968,7 +970,7 @@ elif ((list_updates)); then
 
 # --git-db-update, -G
 elif ((git_db_update)); then
-  if ((${#targets[@]})); then
+  if ((targets_len)); then
     gitcheck "${targets[@]}"
   else
     gitcheck $(pacman -Qmqs -- -git$)
