@@ -109,7 +109,6 @@ final_cow_targets=()        # array, cower targets in correct order
 git_ignore=()               # array, list of packages to ignore for git
 pac_targets=()              # array, list of pacman targets
 targets=()                  # array, full list of targets
-targets_len=                # int, used to check for targets
 stack_size=0                # integer, size of cow_targets stack
 pkg=                        # used when parsing options
 
