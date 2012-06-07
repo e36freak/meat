@@ -3,7 +3,7 @@
 ################################################################################
 # MEAT!!!! simple fast AUR helper, using cower as a back end                   #
 ################################################################################
-# Copywrite Daniel Mills <danielmills1@gmail.com>                              #
+# Copyright Daniel Mills <danielmills1@gmail.com>                              #
 # Wraps 'cower', Copywrite Dave Reisner <d@falconindy.com>                     #
 #                                                                              #
 # Permission is hereby granted, free of charge, to any person obtaining a copy #
