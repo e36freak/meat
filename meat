@@ -29,7 +29,7 @@
 #                pacman-color (for colorized pacman output)                    #
 #                sudo (highly recommended)                                     #
 ################################################################################
-# TODO: pick a better name                                                     #
+# TODO: add package signing options                                            #
 #       find a better way to handle .install files?                            #
 #       write documentation                                                    #
 #         make note of default overwriting of existing package dirs            #
