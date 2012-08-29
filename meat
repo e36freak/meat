@@ -636,7 +636,6 @@ if [[ -r $config_file ]]; then
   [[ $threads = *[![:digit:]]* ]] &&
     die "invalid value for \`threads' in the config file: \`$threads'"
   if [[ $download_dir != "$t_download_dir" ]]; then
-    download_dir=$t_download_dir
     isuserddir=1
   fi
 else
