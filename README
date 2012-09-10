@@ -1,5 +1,4 @@
-meat 0.0.1-b1
-Usage: meat OPERATION [OPTIONS] TARGET ...
+meat OPERATION [OPTIONS] [TARGET [...]]
 
  Operations:
   -h, --help              display this help and exit
