@@ -24,7 +24,7 @@
 # FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS #
 # IN THE SOFTWARE.                                                             #
 #                                                                              #
-# Requires bash4, cower-git, awk                                               #
+# Requires bash4, cower, awk                                                   #
 # Optional deps: git (for handling automatic checking of git pkgs)             #
 #                pacman-color (for colorized pacman output)                    #
 #                sudo (highly recommended)                                     #
@@ -253,7 +253,7 @@ download() {
       E) err "$pkg $info";;
       *) err "cower: $flag $pkg $info";;
     esac
-  done < <("${cower[@]}" -ddbf "$@" 2>&1)
+  done < <("${cower[@]}" --color=never -ddbf "$@" 2>&1)
 }
 
 ## print error, skip if -f is supplied, else die
@@ -532,7 +532,7 @@ set_ignore_arrays() {
 upgrade() {
   local pkg
   ((check_git))  && gitcheck $(pacman -Qmqs -- -git$)
-  coproc cowout { "${cower[@]}" -uq; } || die "cower error"
+  coproc cowout { "${cower[@]}" --color=never -uq; } || die "cower error"
   while read -ru "${cowout[0]}" pkg; do
     targets+=("$pkg")
   done
