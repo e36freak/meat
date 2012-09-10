@@ -532,7 +532,7 @@ set_ignore_arrays() {
 upgrade() {
   local pkg
   ((check_git))  && gitcheck $(pacman -Qmqs -- -git$)
-  coproc cowout { "${cower[@]}" -uq; } || die "cower error"
+  coproc cowout { "${cower[@]}" --color=never -uq; } || die "cower error"
   while read -ru "${cowout[0]}" pkg; do
     targets+=("$pkg")
   done
@@ -891,6 +891,7 @@ if ((iscolor[0])); then
   cower+=(-c) 
 else
   makepkg+=(-m)
+  cower+=(--color=never)
 fi
 
 ## build cower and pacman base commands from options
