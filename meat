@@ -887,7 +887,7 @@ done
 # color info
 if ((iscolor[0])); then
   type -P pacman-color &>/dev/null && pacman=(pacman-color) 
-  cower+=(-c) 
+  cower+=(--color=always) 
 else
   makepkg+=(-m)
   cower+=(--color=never)
