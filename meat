@@ -29,7 +29,7 @@
 #                pacman-color (for colorized pacman output)                    #
 #                sudo (highly recommended)                                     #
 ################################################################################
-# TODO: add package signing options                                            #
+# TODO:                                                                        #
 #       find a better way to handle .install files?                            #
 #       write documentation                                                    #
 #         make note of default overwriting of existing package dirs            #
@@ -87,6 +87,8 @@ msearch=0            # boolean, set for --msearch
 op_declared=0        # boolean, if 1 an option has been specified
 search=0             # boolean, set for --search
 update=0             # boolean, set for --update
+sign=0               # boolean, set for --sign
+forcenosign=0        # boolean, set for --nosign
 
 # options
 addignore=()       # array, used to turn CSV into an array
@@ -570,6 +572,10 @@ meat OPERATION [OPTIONS] [TARGET [...]]
       --ignorerepo REPO   ignore a binary repo. REPO is a comma-separated list
                           of repositories. may be used more than once
       --nossl             do not use https connections
+      --sign              sign the resulting packages with gpg. overrides the
+                          setting in makepkg.conf(5)
+      --nosign            do not create a signature for built packages. also
+                          overrides makepkg.conf(5)
   -t, --target DIR        download to DIR, instead of "${TMPDIR:-/tmp}"
       --threads NUM       limit number of threads created to NUM
       --timeout NUM       specify connection timeout in seconds
@@ -797,6 +803,8 @@ while [[ $1 = -?* ]]; do
       git_ignore+=("${addignore[@]}")
       ;;
     --nossl) nossl=1;;
+    --sign) sign=1; forcenosign=0;;
+    --nosign) sign=0; forcenosign=1;;
     -t|--target?(=*))
       if [[ $1 = --target=* ]]; then
         optarg=${1#*=}
@@ -891,6 +899,13 @@ if ((iscolor[0])); then
 else
   makepkg+=(-m)
   cower+=(--color=never)
+fi
+
+## finish building makepkg
+if ((sign)); then
+  makepkg+=(--sign)
+elif ((forcenosign)); then
+  makepkg+=(--nosign)
 fi
 
 ## build cower and pacman base commands from options
