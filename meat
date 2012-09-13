@@ -86,6 +86,7 @@ info_level=0         # integer, for how many '-i's to pass to cower
 msearch=0            # boolean, set for --msearch
 op_declared=0        # boolean, if 1 an option has been specified
 search=0             # boolean, set for --search
+sign=0               # boolean, set for --sign
 update=0             # boolean, set for --update
 
 # options
@@ -570,6 +571,7 @@ meat OPERATION [OPTIONS] [TARGET [...]]
       --ignorerepo REPO   ignore a binary repo. REPO is a comma-separated list
                           of repositories. may be used more than once
       --nossl             do not use https connections
+      --sign              sign packages made with makepkg
   -t, --target DIR        download to DIR, instead of "${TMPDIR:-/tmp}"
       --threads NUM       limit number of threads created to NUM
       --timeout NUM       specify connection timeout in seconds
@@ -797,6 +799,7 @@ while [[ $1 = -?* ]]; do
       git_ignore+=("${addignore[@]}")
       ;;
     --nossl) nossl=1;;
+    --sign) sign=1;;
     -t|--target?(=*))
       if [[ $1 = --target=* ]]; then
         optarg=${1#*=}
@@ -940,6 +943,7 @@ flock -n 9 || die "only one instance of meat may be running at a time." \
 ## finally, we get to do shit!!!
 # --download, -d
 if ((download)); then
+  ((sign)) && makepkg+=(${makepkg[@]} '--sign')
   ((${#targets[@]})) || die "no targets specified"
   install_all
 
@@ -964,6 +968,7 @@ elif ((search)); then
 
 # --update, -u
 elif ((update)); then
+  ((sign)) && makepkg+=(${makepkg[@]} '--sign')
   upgrade
   install_all
 
