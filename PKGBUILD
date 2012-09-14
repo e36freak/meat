@@ -28,6 +28,7 @@ build() {
 
   install -m 755 -D meat "$pkgdir/usr/bin/meat"
   install -m 644 -D config "$pkgdir/usr/share/meat/config"
+  install -m 644 -D zsh-completions "$pkgdir/usr/share/zsh/site-functions/_meat"
 }
 
 # vim: ft=sh syn=sh et
