@@ -42,7 +42,6 @@ meat OPERATION [OPTIONS] [TARGET [...]]
   -c, --color[=WHEN]      use colored output. WHEN is `never, always, or auto'
       --debug             show debug output
       --format STRING     print package output according to STRING
-      --listdelim DELIM   change list format delimeter to DELIM
   -q, --quiet             output less. if both -q and -v are used, each -q is
                           equivalent to removing a -v
   -v, --verbose           output more. may be specified multiple times for even
