@@ -47,10 +47,12 @@
 shopt -s extglob dotglob globstar nullglob
 
 ### files
-config_file=${XDG_CONFIG_HOME:-$HOME/.config}/meat/config # config file
-cache_dir=${XDG_CACHE_HOME:-$HOME/.cache}/meat            # cache dir
-git_sums_file=$cache_dir/gitsums          # git checksums file
-lock_file=$cache_dir/meat.lck             # lock file
+config_dir=${XDG_CONFIG_HOME:-$HOME/.config}/meat # dir for config file
+config_file=$config_dir/config                    # config file itself
+default_config=/usr/share/meat/config             # default/sample config file
+cache_dir=${XDG_CACHE_HOME:-$HOME/.cache}/meat    # cache dir
+git_sums_file=$cache_dir/gitsums                  # git checksums file
+lock_file=$cache_dir/meat.lck                     # lock file
 
 ### default values
 gitcheck=1                      # boolean, '1' to check git for updates
@@ -619,6 +621,12 @@ trap cleanup 0
 ## check for controlling terminal
 tput cols &>/dev/null || die "requires a controlling terminal"
 
+# create cache and config dirs, if not existing
+mkdir -p "$cache_dir" ||
+  die "cache directory \`$cache_dir' does not exist and could not be created"
+mkdir -p "$config_dir" ||
+  die "config directory \`$config_dir' does not exist and could not be created"
+
 ## get configuration options
 if [[ -r $config_file ]]; then
   source "$config_file"
@@ -649,14 +657,11 @@ if [[ -r $config_file ]]; then
     isuserddir=1
   fi
 else
-  if [[ -e $cache_dir/.firstrun ]]; then
-    warn 1 "error sourcing config file \`$config_file'" \
-           "reverting to default values." \
-           "a default config can be found in \`/usr/share/meat'"
+  if cp "$default_config" "$config_file"; then
+    info 1 "a default config file has been created at \`$config_file'"
   else
-    touch "$cache_dir/.firstrun"
-    info 1 "a sample config file can be found in \`/usr/share/meat'"
-           "please copy it to \`$config_file' and edit to taste"
+    warn 1 "error copying config file \`$default_config' to \`$config_file'" \
+           "reverting to default values."
   fi
 fi
 
@@ -938,9 +943,6 @@ set_ignore_arrays
 mkdir -p "$download_dir" ||
   die "download dir \`$download_dir' can't be created" \
       "check permissions"
-# create cache dir, if not existing
-mkdir -p "$cache_dir" ||
-  die "cache directory \`$cache_dir' does not exist and could not be created"
 # create git sums file, if not existing
 touch "$git_sums_file" ||
   die "\`$git_sums_file' does not exist and could not be created"
