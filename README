@@ -1,52 +1,78 @@
 meat OPERATION [OPTIONS] [TARGET [...]]
 
  Operations:
-  -h, --help              display this help and exit
-  -d, --download          download and install target(s) -- dependencies will be
-                          automatically resolved
-  -G, --git-db-update     updates the git database with new sums, without
+  -h, --help              Display this help and exit
+  -d, --download          Download and install target(s) -- dependencies will be
+                          automatically resolved.
+  -G, --git-db-update     Updates the git database with new sums, without
                           actually installing anything (unstable).
-  -i, --info              show info for target(s) -- pass twice for more detail
-  -m, --msearch           show packages maintained by target(s)
-  -s, --search            search AUR for target(s)
-  -u, --update            check for updates against AUR and install them
-  -U, --listupdates       check for updates against AUR and print them -- acts
+  -i, --info              Show info for target(s) -- pass twice for more detail
+  -m, --msearch           Show packages maintained by target(s)
+  -s, --search            Search AUR for target(s)
+  -u, --update            Check for updates against AUR and install them
+  -U, --listupdates       Check for updates against AUR and print them -- acts
                           the same way as cower -u
 
-  only one operation may be specified.
+  Only one operation may be specified.
 
  General options:
-  -f, --force             no matter what happens, keep going -- using this
+  -f, --force             No matter what happens, keep going -- using this
                           option is not recommended
-  -g, --git-check         check and update checksums for git files. (unstable)
-      --ignoregit PKG     ignore PKG when checking for git updates. PKG is a 
-                          comma-separated list of packages. may be used more
+  -g, --git-check         Check and update checksums for git files. (unstable)
+      --ignoregit PKG     Ignore PKG when checking for git updates. PKG is a 
+                          comma-separated list of packages. May be used more
                           than once
-      --ignore PKG        ignore PKG when upgrading. PKG is a comma-separated
-                          list of packages. may be used more than once
-      --ignorerepo REPO   ignore a binary repo. REPO is a comma-separated list
-                          of repositories. may be used more than once
-      --nossl             do not use https connections
-      --sign              sign the resulting packages with gpg. overrides the
+      --ignore PKG        Ignore PKG when upgrading. PKG is a comma-separated
+                          list of packages. May be used more than once
+      --ignorerepo REPO   Ignore a binary repo. REPO is a comma-separated list
+                          of repositories. May be used more than once
+      --nossl             Do not use https connections
+      --sign              Sign the resulting packages with gpg. Overrides the
                           setting in makepkg.conf(5)
-      --nosign            do not create a signature for built packages. also
+      --nosign            Do not create a signature for built packages. Also
                           overrides makepkg.conf(5)
-  -t, --target DIR        download to DIR, instead of "${TMPDIR:-/tmp}"
-      --threads NUM       limit number of threads created to NUM
-      --timeout NUM       specify connection timeout in seconds
-      --check-all         when installing, prompts you to check every regular
+  -t, --target DIR        Download to DIR, instead of "${TMPDIR:-/tmp}"
+      --threads NUM       Limit number of threads created to NUM
+      --timeout NUM       Specify connection timeout in seconds
+      --check-all         When installing, prompts you to check every regular
                           file in the package directory instead of just the
                           PKGBUILD and .install files
 
  Output options:
-  -c, --color[=WHEN]      use colored output. WHEN is `never, always, or auto'
-      --debug             show debug output
-      --format STRING     print package output according to STRING
-  -q, --quiet             output less. if both -q and -v are used, each -q is
+  -c, --color[=WHEN]      Use colored output. WHEN is `never, always, or auto'
+      --debug             Show debug output
+      --format STRING     Print package output according to STRING
+  -q, --quiet             Output less. If both -q and -v are used, each -q is
                           equivalent to removing a -v
-  -v, --verbose           output more. may be specified multiple times for even
+  -v, --verbose           Output more. May be specified multiple times for even
                           more information
 
  Targets:
-  meat accepts a list of targets, space separated. If any target is the single
+  Meat accepts a list of targets, space separated. If any target is the single
   character '-', it will also read a list of packages from stdin, one per line.
+
+
+ Config:
+  Meat honors a config file which will be looked for first at:
+    $XDG_CONFIG_HOME/meat/config
+  And falls back to:
+    $HOME/.config/meat/config
+
+  A default documented example can be found at /usr/share/meat/config. If a
+  config file does not exist in the above locations when meat runs, the default
+  will be copied to the correct location.
+
+ Note:
+  It is always recommended to do a full system update (pacman -Syu) before
+  installing any new packages, or updating those from the AUR.
+
+ See Also:
+  cower(1), pacman(8)
+
+ Author:
+  Copyright Daniel Mills <danielmills1@gmail.com>
+  Wraps 'cower', Copyright Dave Reisner <d@falconindy.com>
+  Licensing information can be found in the source code
+
+ Bugs:
+  Please report any bugs on Github <https://github.com/e36freak/meat>
