@@ -3,7 +3,7 @@
 ################################################################################
 # MEAT!!!! simple fast AUR helper, using cower as a back end                   #
 ################################################################################
-# Copyright Daniel Mills <danielmills1@gmail.com>                              #
+# Copyright Daniel Mills <dm@e36freak.com>                                     #
 # Wraps 'cower', Copyright Dave Reisner <d@falconindy.com>                     #
 #                                                                              #
 # Permission is hereby granted, free of charge, to any person obtaining a copy #
@@ -617,7 +617,7 @@ meat OPERATION [OPTIONS] [TARGET [...]]
   cower(1), pacman(8)
 
  Author:
-  Copyright Daniel Mills <danielmills1@gmail.com>
+  Copyright Daniel Mills <dm@e36freak.com>
   Wraps 'cower', Copyright Dave Reisner <d@falconindy.com>
   Licensing information can be found in the source code
 

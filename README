@@ -70,7 +70,7 @@ meat OPERATION [OPTIONS] [TARGET [...]]
   cower(1), pacman(8)
 
  Author:
-  Copyright Daniel Mills <danielmills1@gmail.com>
+  Copyright Daniel Mills <dm@e36freak.com>
   Wraps 'cower', Copyright Dave Reisner <d@falconindy.com>
   Licensing information can be found in the source code
 
