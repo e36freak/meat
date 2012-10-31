@@ -11,7 +11,7 @@ depends=('bash>=4.0' 'cower' 'awk')
 makedepends=('git')
 optdepends=('pacman-color: colorized output'
             'sudo: highly recommended')
-_gitroot='http://github.com/e36freak/meat.git'
+_gitroot='git://github.com/e36freak/meat.git'
 _gitname='meat'
 
 build() {
