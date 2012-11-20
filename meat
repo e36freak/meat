@@ -545,7 +545,8 @@ upgrade() {
 ### print usage information
 usage() {
   cat <<'EOF'
-meat OPERATION [OPTIONS] [TARGET [...]]
+Usage: meat OPERATION [OPTIONS] [TARGET [...]]
+  A simple, fast AUR helper written in bash using cower as a back end
 
  Operations:
   -h, --help              Display this help and exit
@@ -586,7 +587,8 @@ meat OPERATION [OPTIONS] [TARGET [...]]
                           PKGBUILD and .install files
 
  Output options:
-  -c, --color[=WHEN]      Use colored output. WHEN is `never, always, or auto'
+  -c, --color[=WHEN]
+        --colour[=WHEN]   Use colored output. WHEN is `never, always, or auto'
       --debug             Show debug output
       --format STRING     Print package output according to STRING
   -q, --quiet             Output less. If both -q and -v are used, each -q is
@@ -747,12 +749,18 @@ while [[ $1 = -?* ]]; do
     --fullupdate) ((op_declared++)); full_update=1;;
 
     # options
-    -c|--color?(=*))
-      if [[ $1 = --color=* ]]; then
+    -c|--colo?(u)r?(=*))
+      if [[ $1 = --colo?(u)r=* ]]; then
         optarg=${1#*=}
         case $optarg in
           always|auto|never) color=$optarg;;
-          *) die "invalid color type: $optarg";;
+          *) 
+            if [[ $1 = --colour* ]]; then
+              die "invalid colour type: $optarg"
+            else
+              die "invalid color type: $optarg"
+            fi
+            ;;
         esac
       else
         color=auto

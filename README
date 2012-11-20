@@ -1,4 +1,5 @@
-meat OPERATION [OPTIONS] [TARGET [...]]
+Usage: meat OPERATION [OPTIONS] [TARGET [...]]
+  A simple, fast AUR helper written in bash using cower as a back end
 
  Operations:
   -h, --help              Display this help and exit
@@ -39,7 +40,8 @@ meat OPERATION [OPTIONS] [TARGET [...]]
                           PKGBUILD and .install files
 
  Output options:
-  -c, --color[=WHEN]      Use colored output. WHEN is `never, always, or auto'
+  -c, --color[=WHEN]
+        --colour[=WHEN]   Use colored output. WHEN is `never, always, or auto'
       --debug             Show debug output
       --format STRING     Print package output according to STRING
   -q, --quiet             Output less. If both -q and -v are used, each -q is
