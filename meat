@@ -30,6 +30,7 @@
 #                sudo (highly recommended)                                     #
 ################################################################################
 # TODO:                                                                        #
+#       better function comments/usage descriptions                            #
 #       find a better way to handle .install files?                            #
 #       write documentation                                                    #
 #         make note of default overwriting of existing package dirs            #
@@ -120,23 +121,29 @@ pkg=                        # used when parsing options
 ### Functions
 
 ## build and install AUR packages
-# usage: aur_install "target dir" "targets"
+# usage: aur_install TARGET_DIR TARGET [...]
 aur_install() {
   local pkg newsum toinst pkgs pkgext
-  hide 4 pushd "$download_dir" || die "could not cd to \`$download_dir'"
+
+  if ! hide 4 pushd "$download_dir"; then
+    die "could not cd to \`$download_dir'"
+  fi
 
   # build and install
   for pkg; do
-    hide 4 pushd "$pkg" || { 
-      err "error while changing to dir \`$pkg'"; continue
-    }
+    if ! hide 4 pushd "$pkg"; then
+      err "error while changing to dir \`$pkg'"
+      continue
+    fi
 
     ## allow user to check files
     checkfiles "$pkg"
 
     ## build and install package
     until "${makepkg[@]}" -f; do
-      confirm "error making package \`$pkg', try again?" || exit
+      if ! confirm "error making package \`$pkg', try again?"; then
+        exit 1
+      fi
       checkfiles "$pkg"
     done
 
@@ -149,7 +156,7 @@ aur_install() {
       die 'error: missing /etc/makepkg.conf, or PKGEXT unset/empty'
     fi
     pkgs=(*"$pkgext")
-    if ((! ${#pkgs[@]})); then
+    if ((!${#pkgs[@]})); then
       die "error: no package file seems to have been created"
     elif ((${#pkgs[@]} == 1)); then
       toinst=$pkgs
@@ -157,29 +164,35 @@ aur_install() {
       IFS= read -rd '' toinst < <(printf '%s\0' "${pkgs[@]}" | sort -Vrz)
     fi
     if inarray "$pkg" "${targets[@]}"; then
-      hide 1 runasroot "${pacman[@]}" -U "$toinst" || {
+      if ! hide 1 runasroot "${pacman[@]}" -U "$toinst"; then
         hide 4 popd
         err "something went wrong while installing \`$pkg'"
         continue
-      }
+      fi
     else
-      hide 1 runasroot "${pacman[@]}" -U --asdeps "$toinst" || {
+      if ! hide 1 runasroot "${pacman[@]}" -U --asdeps "$toinst"; then
         hide 4 popd
         err "something went wrong while installing \`$pkg'"
         continue
-      }
+      fi
     fi
 
     # if package is git, update sums file
-    ((check_git)) && [[ $pkg = *-git ]] || { hide 4 popd; continue; }
+    if ((!check_git)) || [[ $pkg != *-git ]]; then
+      hide 4 popd
+      continue
+    fi
     if [[ ${checked_gits[$pkg]} ]]; then
       git_addsum "$pkg" "${checked_gits[$pkg]}"
     else
-      inarray "$pkg" "${git_ignore[@]}" && { hide 4 popd; continue; }
-      { newsum=$(git_getsum "$pkg" 3>&1 >&4-); } 4>&1 || {
+      if inarray "$pkg" "${git_ignore[@]}"; then
         hide 4 popd
         continue
-      }
+      fi
+      if ! { newsum=$(git_getsum "$pkg" 3>&1 >&4-); } 4>&1; then
+        hide 4 popd
+        continue
+      fi
       git_addsum "$pkg" "$newsum"
     fi
 
@@ -189,24 +202,27 @@ aur_install() {
 }
 
 ### allow user to check PKGBUILD, .install, and other files
-# usage: checkfiles "package"
+# usage: checkfiles PACKAGE
 checkfiles() {
   local install file pkg=$1
 
   ## allow user to edit PKGBUILD and $install
-  confirm "Edit PKGBUILD for \`$pkg'?" && ${EDITOR:-vi} PKGBUILD
+  if confirm "Edit PKGBUILD for \`$pkg'?";then
+    ${EDITOR:-vi} PKGBUILD
+  fi
 
   # source PKGBUILD for $install, prompt if exists
   source PKGBUILD
-  if [[ $install ]]; then
-    confirm "Edit \`$install'?" && ${EDITOR:-vi} "$install"
+  if [[ $install ]] && confirm "Edit \`$install'?";then
+    ${EDITOR:-vi} "$install"
   fi
 
   # allow for checking every other regular file
   if ((check_all)); then
     for file in ./**/!(PKGBUILD|"$install"); do
-      if [[ -f $file && -w $file && $(file "$file") = *text ]]; then
-        confirm "Edit \`$file'?" && ${EDITOR:-vi} "$file"
+      if [[ -f $file && -w $file && $(file "$file") = *text ]] &&
+         confirm "Edit \`$file'?";then
+        ${EDITOR:-vi} "$file"
       fi
     done
   fi
@@ -215,24 +231,29 @@ checkfiles() {
 ### clean up, clean up, everybody everywhere!
 cleanup() {
   rm -rf "$gitcheck_dir" "$tmp"
-  ((isuserddir)) || rm -rf "$download_dir"
+  if ((!isuserddir)); then
+    rm -rf "$download_dir"
+  fi
 }
     
 ## ask for confirmation
-# usage: confirm "message"
+# usage: confirm [MESSAGE]
 confirm() {
   local -l reply        # convert to lowercase on assignment
+  local msg=${1:-Continue?}
 
   # make sure stdin is a terminal
-  [[ -t 0 ]] || exec </dev/tty
+  if [[ ! -t 0 ]]; then
+    exec </dev/tty
+  fi
 
   # actually print the prompt, return according to response
-  read -p "$bold$1$reset [Y/n] " reply >/dev/tty
+  read -p "$bold$msg$reset [Y/n] " reply >/dev/tty
   [[ -z $reply || $reply = y?(es) ]]
 }
 
 ## print error message, exit
-# usage: die "messages"
+# usage: die MESSAGE [...]
 die() { 
   if ((iscolor[1])); then
     printf "$red%s:$reset" "error"
@@ -244,9 +265,10 @@ die() {
 } >&2
 
 ## download packages, parse cower output for dependency info
-# usage: download "targets"
+# usage: download TARGET [...]
 download() {
   local flag pkg info
+
   info 1 'Cower is downloading packages...'
 
   # parse cower output, add to stacks
@@ -261,7 +283,7 @@ download() {
 }
 
 ## print error, skip if -f is supplied, else die
-# usage: err "messages"
+# usage: err MESSAGE [...]
 err() {
   if ((force)); then
     warn 1 "$@"
@@ -271,58 +293,63 @@ err() {
 }
 
 ## update the git_sums_file for a given package
-# usage: git_addsum "name" "sum"
+# usage: git_addsum NAME SUM
 git_addsum() {
-  local name=$1 sum=$2
-  tmp=$(mktemp) || die "error creating temp file"
-  {
-    awk -v name="$name" '$1 != name' "$git_sums_file"
-    printf "%s %s\n" "$name" "$sum"
-  } >"$tmp" && mv "$tmp" "$git_sums_file"
+  if ! tmp=$(mktemp); then
+    die "error creating temp file"
+  fi
+
+  if awk -v n="$1" -v s="$2" '$1 != name;
+                              END {print n, s}' "$git_sums_file" >"$tmp"; then
+    mv "$tmp" "$git_sums_file"
+  fi
 }
 
 ## shallow git clone, rev parse, return current sum
-# usage: { sum=$(git_getsum "$pkg" 3>&1 >&4-); } 4>&1
+# usage: { sum=$(git_getsum PACKAGE 3>&1 >&4-); } 4>&1
 # (aka capture fd 3, leave stdout and stderr intact)
 git_getsum() {
   local pkg=$1 newsum _gitroot _gitname
 
   # delete existing build directories to avoid conflicts
   info 3 "checking for \`$pkg' directory, deleting if it exists"
-  [[ -d $gitcheck_dir/$pkg ]] && rm -rf "$gitcheck_dir/$pkg"
+  if [[ -d $gitcheck_dir/$pkg ]]; then
+    rm -rf "$gitcheck_dir/$pkg"
+  fi
 
   # source PKGBUILD, get git source
   info 3 "sourcing PKGBUILD for \`$pkg'"
   if [[ ! -r $download_dir/$pkg/PKGBUILD ]]; then
-    hide 2 "${cower[@]}" -d "$pkg" || {
+    if ! hide 2 "${cower[@]}" -d "$pkg"; then
       warn 1 "error downloading PKGBUILD for \`$pkg', skipping"
       return 1
-    }
+    fi
   fi
-  source "$download_dir/$pkg/PKGBUILD" || {
+  if ! source "$download_dir/$pkg/PKGBUILD"; then
     warn 1 "error sourcing PKGBUILD for \`$pkg', skipping"
     return 1
-  }
+  fi
       
   # create directory to check git packages, change to dir
-  mkdir -p "$gitcheck_dir" && hide 4 pushd "$gitcheck_dir" ||
+  if ! { mkdir -p "$gitcheck_dir" && hide 4 pushd "$gitcheck_dir"; }; then
     die "error creating gitcheck directory \`$gitcheck_dir'"
+  fi
 
   # shallow git clone
   info 2 "cloning git repo for \`$pkg'"
-  hide 2 git clone --depth 1 "$_gitroot" "$_gitname" || {
+  if ! hide 2 git clone --depth 1 "$_gitroot" "$_gitname"; then
     hide 4 popd
     warn 1 "$_gitname not found in github, check \`$_gitroot', skipping"
     return 1
-  }
+  fi
 
   # get current md5sum
   if hide 4 pushd "$_gitname"; then
-    newsum=$(git rev-parse origin) || {
+    if ! newsum=$(git rev-parse origin); then
       warn 1 "error getting md5sum for \`$pkg', skipping"
       return 1
-    }
-    hide 4 popd && rm -rf "$_gitname" &>/dev/null
+    fi
+    hide 4 popd && rm -rf "$_gitname" >/dev/null 2>&1
   else
     hide 4 popd
     warn 1 "error changing dir for \`$pkg', skipping"
@@ -336,8 +363,7 @@ git_getsum() {
 
 ### check if installed git packages are up to date
 gitcheck() {
-  local pkg tmp
-  local newsum oldsum name sum
+  local pkg tmp newsum oldsum name sum
 
   # check for updates
   for pkg; do
@@ -345,11 +371,14 @@ gitcheck() {
     inarray "$pkg" "${git_ignore[@]}" && continue
 
     # get old md5sum from file
-    oldsum=$(awk -v name="$pkg" '$1 == name{print $2}' "$git_sums_file") ||
+    if ! oldsum=$(awk -v n="$pkg" '$1==n {print $2}' "$git_sums_file"); then
       continue
+    fi
 
     # get new/current md5sum
-    { newsum=$(git_getsum "$pkg" 3>&1 >&4-); } 4>&1 || continue
+    if ! { newsum=$(git_getsum "$pkg" 3>&1 >&4-); } 4>&1; then
+      continue
+    fi
 
     # compare sums
     if [[ $oldsum = "$newsum" ]]; then
@@ -369,59 +398,74 @@ gitcheck() {
 }
 
 ## run command, suppressing output according to verbosity
-# usage: hide 'verbosity' "command"
+# usage: hide VERBOSITY COMMAND [ARG [...]]
 hide() {
   local v=$1; shift
+
   if ((verbosity >= v)); then
     "$@"
   else
-    "$@" &>/dev/null
+    "$@" >/dev/null 2>&1
   fi
 }
 
 ## checks if "$needle" is in "${haystack[@]}"
-# usage: inarray "$needle" "${haystack[@]}"
+# usage: inarray NEEDLE HAYSTACK [...]
 inarray() {
   local val needle=$1; shift
+
   for val; do
-    [[ $needle = "$val" ]] && return
+    if [[ $needle = "$val" ]]; then
+      return 0
+    fi
   done
   return 1
 }
 
 ## print info message
-# usage: info 'verbosity' "messages"
+# usage: info VERBOSITY MESSAGES
 info() {
   local v=$1; shift
-  ((verbosity >= v)) || return
-  printf "$bold"; printf "%s\n" "$@"; printf "$reset"
+
+  if ((verbosity < v)); then
+    return
+  fi
+  printf %s "$bold"
+  printf "%s\n" "$@"
+  printf %s "$reset"
 }
 
 ### install everything in "${targets[@]}"
 install_all() {
-  ((${#targets[@]})) || {
+  if ((! ${#targets[@]})); then
     info 1 "there is nothing to do"
     exit 0
-  }
+  fi
 
   # download targets, or put in the pacman targets array
   download "${targets[@]}"
 
   # print lists of targets
   if ((${#cow_targets[@]} || ${#pac_targets[@]})); then
-    ((${#pac_targets[@]})) && {
+    if ((${#pac_targets[@]})); then
       print_targets "blue" "Repo Targets" "${pac_targets[@]}"
-    }
-    ((${#cow_targets[@]})) && {
+    fi
+    if ((${#cow_targets[@]})); then
       print_targets "green" "AUR Targets" "${cow_targets[@]}"
-    } 
-    echo; confirm "Proceed with installation?" || exit 0
+    fi
+
+    echo
+    if ! confirm "Proceed with installation?"; then
+      exit 0
+    fi
   else
     exit 0
   fi
 
   # install targets in repos
-  ((${#pac_targets[@]})) && pac_install "${pac_targets[@]}"
+  if ((${#pac_targets[@]})); then
+    pac_install "${pac_targets[@]}"
+  fi
 
   ## install AUR targets
   # pop values from stack, make array in the correct order
@@ -429,23 +473,28 @@ install_all() {
     final_cow_targets+=("$(pop)")
   done
   # install AUR targets
-  ((${#final_cow_targets[@]})) && aur_install "${final_cow_targets[@]}"
+  if ((${#final_cow_targets[@]})); then
+    aur_install "${final_cow_targets[@]}"
+  fi
 }
 
 ## add value to pacman list
-# usage pacadd 'value'
+# usage pacadd VALUE [...]
 pacadd() {
   pac_targets+=("$@")
 }
 
 ## install pacman packages
-# usage: pac_install "targets"
+# usage: pac_install TARGET [...]
 pac_install() {
   local -a explicits
   local pkg
+
   hide 1 runasroot "${pacman[@]}" -S --asdeps "$@"
   for pkg; do
-    inarray "$pkg" "${targets[@]}" && explicits+=("$pkg")
+    if inarray "$pkg" "${targets[@]}"; then
+      explicits+=("$pkg")
+    fi
   done
   info 2 "changing packages specified explicitly to have the correct properties"
   hide 2 runasroot "${pacman[@]}" -D --noconfirm --as-explicit "${explicits[@]}"
@@ -454,17 +503,20 @@ pac_install() {
 ## pop value from top of stack
 # usage: value=$(pop)
 pop() {
-  ((stack_size >= 0)) || return
+  if ((stack_size < 0)); then
+    return 1
+  fi
   printf "%s" "${cow_targets[stack_size]}"
 }
 
 ## print target list
-# usage: print_targets "color" "title" "targets"
+# usage: print_targets COLOR TITLE TARGET [...]
 print_targets() {
   local col=$1 name=$2; shift 2
   local title="$name ($#): "
   local width=$(($(tput cols)-${#title}))
   local i=0
+
   echo
   
   # print title
@@ -476,7 +528,7 @@ print_targets() {
 
   # print list, indented properly
   while read -r line; do
-    if ((! i++)); then
+    if ((!i++)); then
       printf "%s\n" "$line"
     else
       printf "%*s%s\n" "${#title}" " " "$line"
@@ -491,9 +543,9 @@ push() {
 }
 
 ### run command as root
-# usage: runasroot "command"
+# usage: runasroot COMAND [ARG [...]]
 runasroot() {
-  if sudo -v &>/dev/null && sudo -l "$@" &>/dev/null; then
+  if sudo -v >/dev/null 2>&1 && sudo -l "$@" >/dev/null 2>&1; then
     sudo "$@"
   else
     printf "%s " "Root"
@@ -524,19 +576,29 @@ set_colors() {
 ### build arrays to ignore packages
 set_ignore_arrays() {
   local IFS=,
+
   if [[ ${ignore[*]} ]]; then
     cower+=(--ignore="${ignore[*]}")
     pacman+=(--ignore "${ignore[*]}")
   fi
-  [[ ${repo_ignore[*]} ]] && cower+=(--ignorerepo="${repo_ignore[*]}")
-  [[ ${group_ignore[*]} ]] && pacman+=(--ignoregroup "${group_ignore[*]}")
+  if [[ ${repo_ignore[*]} ]]; then
+    cower+=(--ignorerepo="${repo_ignore[*]}")
+  fi
+  if [[ ${group_ignore[*]} ]]; then
+    pacman+=(--ignoregroup "${group_ignore[*]}")
+  fi
 }
 
 ### full AUR upgrade for installed packages
 upgrade() {
   local pkg
-  ((check_git))  && gitcheck $(pacman -Qmqs -- -git$)
-  coproc cowout { "${cower[@]}" --color=never -uq; } || die "cower error"
+
+  if ((check_git)); then
+    gitcheck $(pacman -Qmqs -- -git$)
+  fi
+  if ! coproc cowout { "${cower[@]}" --color=never -uq; }; then
+    die "cower error"
+  fi
   while read -ru "${cowout[0]}" pkg; do
     targets+=("$pkg")
   done
@@ -544,7 +606,7 @@ upgrade() {
 
 ### print usage information
 usage() {
-  cat <<'EOF'
+cat <<'EOF'
 Usage: meat OPERATION [OPTIONS] [TARGET [...]]
   A simple, fast AUR helper written in bash using cower as a back end
 
@@ -632,7 +694,10 @@ EOF
 # usage: warn 'verbosity' "messages"
 warn() { 
   local v=$1; shift
-  ((verbosity >= v)) || return
+
+  if ((verbosity < v)); then
+    return 1
+  fi
   if ((iscolor[1])); then
     printf "$yellow%s:$reset" "warning"
   else
@@ -647,13 +712,17 @@ warn() {
 trap cleanup 0
 
 ## check for controlling terminal
-tput cols &>/dev/null || die "requires a controlling terminal"
+if ! tput cols >/dev/null 2>&1; then
+  die "requires a controlling terminal"
+fi
 
 # create cache and config dirs, if not existing
-mkdir -p "$cache_dir" ||
+if ! mkdir -p "$cache_dir"; then
   die "cache directory \`$cache_dir' does not exist and could not be created"
-mkdir -p "$config_dir" ||
+fi
+if ! mkdir -p "$config_dir"; then
   die "config directory \`$config_dir' does not exist and could not be created"
+fi
 
 ## get configuration options
 if [[ -r $config_file ]]; then
@@ -673,14 +742,18 @@ if [[ -r $config_file ]]; then
     *) die "invalid value for \`color' in the config file: \`$color'";;
   esac
   set_colors
-  [[ $nossl = [01] ]] ||
+  if [[ $nossl != [01] ]]; then
     die "invalid value for \`nossl' in the config file: \`$nossl'"
-  [[ $check_all = [01] ]] ||
+  fi
+  if [[ $check_all != [01] ]]; then
     die "invalid value for \`check_all' in the config file: \`$check_all'"
-  [[ $timeout = *[![:digit:]]* ]] &&
+  fi
+  if [[ $timeout = *[![:digit:]]* ]]; then
     die "invalid value for \`timeout' in the config file: \`$timeout'"
-  [[ $threads = *[![:digit:]]* ]] &&
+  fi
+  if [[ $threads = *[![:digit:]]* ]]; then
     die "invalid value for \`threads' in the config file: \`$threads'"
+  fi
   if [[ $download_dir != "$t_download_dir" ]]; then
     isuserddir=1
   fi
@@ -793,7 +866,9 @@ while [[ $1 = -?* ]]; do
       else 
         die "no targets given for $1"
       fi
-      [[ $optarg = *\ * ]] && die "invalid ignore list format for $1"
+      if [[ $optarg = *\ * ]]; then
+        die "invalid ignore list format for $1"
+      fi
 
       IFS=, read -ra addignore <<<"$optarg"
       ignore+=("${addignore[@]}")
@@ -807,7 +882,9 @@ while [[ $1 = -?* ]]; do
       else 
         die "no targets given for $1"
       fi
-      [[ $optarg = *\ * ]] && die "invalid ignore list format for $1"
+      if [[ $optarg = *\ * ]]; then
+        die "invalid ignore list format for $1"
+      fi
 
       IFS=, read -ra addignore <<<"$optarg"
       repo_ignore+=("${addignore[@]}")
@@ -821,7 +898,9 @@ while [[ $1 = -?* ]]; do
       else 
         die "no targets given for $1"
       fi
-      [[ $optarg = *\ * ]] && die "invalid ignore list format for $1"
+      if [[ $optarg = *\ * ]]; then
+        die "invalid ignore list format for $1"
+      fi
 
       IFS=, read -ra addignore <<<"$optarg"
       group_ignore+=("${addignore[@]}")
@@ -835,7 +914,9 @@ while [[ $1 = -?* ]]; do
       else 
         die "no targets given for $1"
       fi
-      [[ $optarg = *\ * ]] && die "invalid ignore list format for $1"
+      if [[ $optarg = *\ * ]]; then
+        die "invalid ignore list format for $1"
+      fi
 
       IFS=, read -ra addignore <<<"$optarg"
       git_ignore+=("${addignore[@]}")
@@ -896,9 +977,10 @@ done
 
 
 ## this script should not be run as root!
-((UID == 0)) &&
+if ((!UID)); then
   die "do not run this script as root" \
       "you will prompted for the sudo/root password when needed"
+fi
   
 # option error handling, format checking
 if ((op_declared > 1)); then
@@ -906,8 +988,9 @@ if ((op_declared > 1)); then
 elif ((! op_declared)); then
   die 'no operation specified'
 fi
-((git_check && ! update)) &&
+if ((git_check && !update)); then
   die '--git-check may only be used with -u (--update)'
+fi
 
 # get targets, from stdin and positional parameters
 while (($#)); do
@@ -932,7 +1015,9 @@ done
 
 # color info
 if ((iscolor[0])); then
-  type -P pacman-color &>/dev/null && pacman=(pacman-color) 
+  if type -P pacman-color >/dev/null 2>&1; then
+    pacman=(pacman-color) 
+  fi
   cower+=(--color=always) 
 else
   makepkg+=(-m)
@@ -962,9 +1047,18 @@ elif ((! verbosity)); then
   cower+=(-q)
 fi
 
-((timeout != 10)) && cower+=(--timeout "$timeout")  # timeout
-((nossl)) && cower+=(--nossl)                       # nossl
-((threads != 10)) && cower+=("--threads" "$2")      # threads
+# timeout
+if ((timeout != 10)); then
+  cower+=(--timeout "$timeout")
+fi
+# nossl
+if ((nossl)); then
+  cower+=(--nossl)
+fi
+# threads
+if ((threads != 10)); then
+  cower+=("--threads" "$2")
+fi
 
 # default download dir, pass to cower
 cower+=(-t "$download_dir")
@@ -974,28 +1068,36 @@ set_ignore_arrays
 
 ### files and directories
 # make sure download dir exists
-mkdir -p "$download_dir" ||
+if ! mkdir -p "$download_dir"; then
   die "download dir \`$download_dir' can't be created" \
       "check permissions"
+fi
 # create git sums file, if not existing
-touch "$git_sums_file" ||
+if ! touch "$git_sums_file"; then
   die "\`$git_sums_file' does not exist and could not be created"
+fi
 
 ### lock file handling
 {
-flock -n 9 || die "only one instance of meat may be running at a time." \
-                  "if you are sure that another instance isn't running," \
-                  "remove \`$lock_file'"
+if ! flock -n 9; then
+  die "only one instance of meat may be running at a time." \
+      "if you are sure that another instance isn't running," \
+      "remove \`$lock_file'"
+fi
                 
 ## finally, we get to do shit!!!
 # --download, -d
 if ((download)); then
-  ((${#targets[@]})) || die "no targets specified"
+  if ((!${#targets[@]})); then
+    die "no targets specified"
+  fi
   install_all
 
 # --info, -i
 elif ((info_level)); then
-  ((${#targets[@]})) || die "no targets specified"
+  if ((!${#targets[@]})); then
+    die "no targets specified"
+  fi
   if ((info_level == 1)); then
     "${cower[@]}" -i "${targets[@]}"
   else
@@ -1004,12 +1106,16 @@ elif ((info_level)); then
 
 # --msearch, -m
 elif ((msearch)); then
-  ((${#targets[@]})) || die "no targets specified"
+  if ((!${#targets[@]})); then
+    die "no targets specified"
+  fi
   "${cower[@]}" -m "${targets[@]}"
 
 # --search, -s
 elif ((search)); then
-  ((${#targets[@]})) || die "no targets specified"
+  if ((!${#targets[@]})); then
+    die "no targets specified"
+  fi
   "${cower[@]}" -s "${targets[@]}"
 
 # --update, -u
