@@ -1,7 +1,7 @@
 # Contributor: Daniel Mills <dm@e36freak.com>
 
 pkgname=meat-git
-pkgver=20121023
+pkgver=20121214
 pkgrel=1
 pkgdesc="A simple fast AUR helper, using cower as a back end"
 arch=('i686' 'x86_64')
