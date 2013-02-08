@@ -795,8 +795,13 @@ while (($#)); do
         fi
       done
       ;;
-    # add --endopts for --
-    --) options+=(--endopts);;
+    # end of options, stop breaking them up
+    --)
+      options+=(--endopts)
+      shift
+      options+=("$@")
+      break
+      ;;
     # otherwise, nothing special
     *) options+=("$1");;
   esac
