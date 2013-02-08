@@ -3,7 +3,7 @@
 pkgname=meat-git
 pkgver=20130208
 pkgrel=1
-pkgdesc="Bash wrapper for Cower"
+pkgdesc="A simple fast AUR helper, using cower as a back end"
 arch=('i686' 'x86_64')
 url="http://github.com/e36freak/meat"
 license=('MIT')

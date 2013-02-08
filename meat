@@ -596,12 +596,16 @@ upgrade() {
   if ((check_git)); then
     gitcheck $(pacman -Qmqs -- -git$)
   fi
-  if ! coproc cowout { "${cower[@]}" --color=never -uq; }; then
-    die "cower error"
-  fi
+
+  coproc cowout { "${cower[@]}" --color=never -uq; }
   while read -ru "${cowout[0]}" pkg; do
     targets+=("$pkg")
   done
+
+# put this back whenever chet fixes coproc
+#  if ! wait "$cowout_PID"; then
+#    die "cower error"
+#  fi
 }
 
 ### print usage information
