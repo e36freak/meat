@@ -26,7 +26,6 @@
 #                                                                              #
 # Requires bash4, cower, awk                                                   #
 # Optional deps: git (for handling automatic checking of git pkgs)             #
-#                pacman-color (for colorized pacman output)                    #
 #                sudo (highly recommended)                                     #
 ################################################################################
 # TODO:                                                                        #
@@ -1024,9 +1023,7 @@ done
 
 # color info
 if ((iscolor[0])); then
-  if type -P pacman-color >/dev/null 2>&1; then
-    pacman=(pacman-color) 
-  fi
+  pacman+=(--color=always)
   cower+=(--color=always) 
 else
   makepkg+=(-m)
