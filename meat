@@ -328,7 +328,7 @@ git_getsum() {
     warn 1 "error sourcing PKGBUILD for \`$pkg', skipping"
     return 1
   fi
-      
+
   # create directory to check git packages, change to dir
   if ! { mkdir -p "$gitcheck_dir" && hide 4 pushd "$gitcheck_dir"; }; then
     die "error creating gitcheck directory \`$gitcheck_dir'"
@@ -695,7 +695,7 @@ EOF
 
 ## print error message
 # usage: warn 'verbosity' "messages"
-warn() { 
+warn() {
   local v=$1; shift
 
   if ((verbosity < v)); then
@@ -786,7 +786,7 @@ while (($#)); do
       # loop over each character starting with the second
       for ((i=1; i<${#1}; i++)); do
         c=${1:i:1}
-        
+
         # add current char to options
         options+=("-$c")
 
@@ -871,7 +871,7 @@ while [[ $1 = -?* ]]; do
       elif [[ $2 ]]; then
         optarg=$2
         shift
-      else 
+      else
         die "no targets given for $1"
       fi
       if [[ $optarg = *\ * ]]; then
@@ -887,7 +887,7 @@ while [[ $1 = -?* ]]; do
       elif [[ $2 ]]; then
         optarg=$2
         shift
-      else 
+      else
         die "no targets given for $1"
       fi
       if [[ $optarg = *\ * ]]; then
@@ -903,7 +903,7 @@ while [[ $1 = -?* ]]; do
       elif [[ $2 ]]; then
         optarg=$2
         shift
-      else 
+      else
         die "no targets given for $1"
       fi
       if [[ $optarg = *\ * ]]; then
@@ -1090,7 +1090,7 @@ if ! flock -n 9; then
       "if you are sure that another instance isn't running," \
       "remove \`$lock_file'"
 fi
-                
+
 ## finally, we get to do shit!!!
 # --download, -d
 if ((download)); then
