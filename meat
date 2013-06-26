@@ -148,9 +148,14 @@ aur_install() {
 
     # check if package is explicit, or installed as a dep, install accordingly
     info 1 "Installing \`$pkg'..."
-    # get PKGEXT from makepkg.conf
-    IFS= read -rd '' pkgext < <(source /etc/makepkg.conf &&
-                                printf '%s\0' "$PKGEXT")
+    
+    pkgext=$PKGEXT
+    # get PKGEXT from makepkg.conf, if not already set in PKGBUILD
+    if [[ -z $pkgext ]]; then
+        IFS= read -rd '' pkgext < <(source /etc/makepkg.conf &&
+                                    printf '%s\0' "$PKGEXT")
+    fi
+
     if [[ -z $pkgext ]]; then
       die 'error: missing /etc/makepkg.conf, or PKGEXT unset/empty'
     fi
