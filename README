@@ -38,6 +38,7 @@ Usage: meat OPERATION [OPTIONS] [TARGET [...]]
       --check-all         When installing, prompts you to check every regular
                           file in the package directory instead of just the
                           PKGBUILD and .install files
+      --check-none        When installing, does not prompt you to check files
 
  Output options:
   -c, --color[=WHEN]
