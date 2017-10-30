@@ -101,6 +101,7 @@ optarg=            # used for parsing --foo=bar options
 repo_ignore=()     # array, repos to ignore
 check_git=0        # boolean, if 1 --git-check has been specified
 check_all=0        # boolean, if 1 --check-all has been specified
+check_none=0       # boolean, if 1 --check-none has been specified
 force=0            # boolean, if 1 --force has been specified
 nossl=0            # boolean, if 1 --nossl has been specified
 threads=10         # integer, number of threads for cower to create
@@ -203,27 +204,29 @@ aur_install() {
 ### allow user to check PKGBUILD, .install, and other files
 # usage: checkfiles PACKAGE
 checkfiles() {
-  local install file pkg=$1
+  if ((!check_none)); then
+    local install file pkg=$1
 
-  ## allow user to edit PKGBUILD and $install
-  if confirm "Edit PKGBUILD for \`$pkg'?";then
-    ${EDITOR:-vi} PKGBUILD
-  fi
+    ## allow user to edit PKGBUILD and $install
+    if confirm "Edit PKGBUILD for \`$pkg'?";then
+      ${EDITOR:-vi} PKGBUILD
+    fi
 
-  # source PKGBUILD for $install, prompt if exists
-  source PKGBUILD
-  if [[ $install ]] && confirm "Edit \`$install'?";then
-    ${EDITOR:-vi} "$install"
-  fi
+    # source PKGBUILD for $install, prompt if exists
+    source PKGBUILD
+    if [[ $install ]] && confirm "Edit \`$install'?";then
+      ${EDITOR:-vi} "$install"
+    fi
 
-  # allow for checking every other regular file
-  if ((check_all)); then
-    for file in ./**/!(PKGBUILD|"$install"); do
-      if [[ -f $file && -w $file && $(file "$file") = *text ]] &&
-         confirm "Edit \`$file'?";then
-        ${EDITOR:-vi} "$file"
-      fi
-    done
+    # allow for checking every other regular file
+    if ((check_all)); then
+      for file in ./**/!(PKGBUILD|"$install"); do
+        if [[ -f $file && -w $file && $(file "$file") = *text ]] &&
+           confirm "Edit \`$file'?";then
+          ${EDITOR:-vi} "$file"
+        fi
+      done
+    fi
   fi
 }
 
@@ -650,6 +653,7 @@ Usage: meat OPERATION [OPTIONS] [TARGET [...]]
       --check-all         When installing, prompts you to check every regular
                           file in the package directory instead of just the
                           PKGBUILD and .install files
+      --check-none        When installing, does not prompt you to check files
 
  Output options:
   -c, --color[=WHEN]
@@ -750,6 +754,9 @@ if [[ -r $config_file ]]; then
   fi
   if [[ $check_all != [01] ]]; then
     die "invalid value for \`check_all' in the config file: \`$check_all'"
+  fi
+  if [[ $check_none != [01] ]]; then
+    die "invalid value for \`check_none' in the config file: \`$check_none'"
   fi
   if [[ $timeout = *[![:digit:]]* ]]; then
     die "invalid value for \`timeout' in the config file: \`$timeout'"
@@ -967,6 +974,7 @@ while [[ $1 = -?* ]]; do
       ;;
     -g|--git-check) check_git=1;;
     --check-all) check_all=1;;
+    --check-none) check_none=1;;
 
     # end of options
     --endopts) shift; break;;
