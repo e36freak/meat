@@ -748,7 +748,6 @@ if [[ -r $config_file ]]; then
     always|auto|never) :;;
     *) die "invalid value for \`color' in the config file: \`$color'";;
   esac
-  set_colors
   if [[ $nossl != [01] ]]; then
     die "invalid value for \`nossl' in the config file: \`$nossl'"
   fi
@@ -1030,6 +1029,7 @@ while (($#)); do
 done
 
 # color info
+set_colors
 if ((iscolor[0])); then
   pacman+=(--color=always)
   cower+=(--color=always) 
